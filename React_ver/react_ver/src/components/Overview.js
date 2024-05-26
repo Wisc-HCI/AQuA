@@ -4,6 +4,7 @@ import './css/Overview.css';
 function Overview() {
   return (
     <div className="overview-container">
+      <h2 className="overview-header">Overview</h2>
       <div className="qa-pair">
         <div className="question">Q: What is the purpose of this video?</div>
         <div className="answer">A: The purpose of this video is to demonstrate the capabilities of the Video Language Model (VLM) in analyzing and understanding video content.</div>
