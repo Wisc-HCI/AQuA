@@ -163,7 +163,7 @@ with gr.Blocks(css=custom_css) as demo:
     with gr.Row():
         with gr.Column():
             gr.Markdown(additional_info, elem_id="additional-info-container")
-    gr.Markdown("<div class='footer'>Powered by Gradio</div>")
+    #gr.Markdown("<div class='footer'>Powered by Gradio</div>")
 
 # Run the app
 demo.launch()
