@@ -6,29 +6,40 @@ def display_video():
 
 def overview():
     return """
-    ### Overview
-    **Q: What is the purpose of this video?**  
-    A: The purpose of this video is to demonstrate the capabilities of the Video Language Model (VLM) in analyzing and understanding video content.
-
-    **Q: How does the VLM work?**  
-    A: The VLM uses advanced machine learning algorithms to process video frames and extract meaningful information, which is then used to generate a comprehensive overview and timeline of the video's content.
-
-    **Q: What can users expect from this demonstration?**  
-    A: Users can expect a detailed analysis of the video's key events, insights into the VLM's processing techniques, and an interactive timeline highlighting important moments in the video.
+    <div class='qa-pair'>
+        <div class='question'>Q: What is the purpose of this video?</div>
+        <div class='answer'>A: The purpose of this video is to demonstrate the capabilities of the Video Language Model (VLM) in analyzing and understanding video content.</div>
+    </div>
+    <div class='qa-pair'>
+        <div class='question'>Q: How does the VLM work?</div>
+        <div class='answer'>A: The VLM uses advanced machine learning algorithms to process video frames and extract meaningful information, which is then used to generate a comprehensive overview and timeline of the video's content.</div>
+    </div>
+    <div class='qa-pair'>
+        <div class='question'>Q: What can users expect from this demonstration?</div>
+        <div class='answer'>A: Users can expect a detailed analysis of the video's key events, insights into the VLM's processing techniques, and an interactive timeline highlighting important moments in the video.</div>
+    </div>
     """
 
 def timeline():
     return """
-    ### Timeline
-    - **00:00:00** - Start
-    - **00:10:00** - Important Event 1
-    - **00:20:00** - Important Event 2
+    <div class='qa-pair'>
+        <div class='question'>Q: What is the timeline of key events in the video?</div>
+        <div class='answer'>
+            <ul class='timeline-list'>
+                <li><strong>00:00:00</strong> - Start</li>
+                <li><strong>00:10:00</strong> - Important Event 1</li>
+                <li><strong>00:20:00</strong> - Important Event 2</li>
+            </ul>
+        </div>
+    </div>
     """
 
 def additional_info():
     return """
-    ### Additional Information
-    Here you can provide additional information or analysis related to the video and its content.
+    <div class='qa-pair'>
+        <div class='question'>Q: Is there any additional information or analysis related to the video content?</div>
+        <div class='answer'>A: Here I will provide additional information or analysis related to the video and its content.</div>
+    </div>
     """
 
 # Define custom CSS for styling
@@ -61,6 +72,10 @@ h2 {
     margin-bottom: 20px;
 }
 
+.timeline-list li strong {
+    color: #000;  /* Ensure timestamp text color is black */
+}
+
 .question {
     background-color: #e0e0e0;
     padding: 10px;
@@ -75,7 +90,7 @@ h2 {
     padding: 10px;
     border-radius: 8px;
     border: 1px solid #ddd;
-    color: #555;
+    color: #000;
 }
 
 .timeline-list {
@@ -85,7 +100,7 @@ h2 {
 
 .timeline-list li {
     font-size: 1em;
-    color: #555;
+    color: #000;
     padding: 10px;
     margin-bottom: 10px;
     border-radius: 8px;
@@ -100,7 +115,7 @@ h2 {
 
 .timeline-list li::before {
     content: "• ";
-    color: #FF9800;
+    color: #006A4E;
     font-weight: bold;
 }
 
