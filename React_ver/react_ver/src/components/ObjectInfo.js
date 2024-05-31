@@ -4,9 +4,9 @@ import './css/ObjectInfo.css';
 function ObjectInfo() {
   return (
     <div className="object-info-container">
-      <div className="text-box">text 5</div>
-      <div className="text-box">text 6</div>
-      <div className="text-box">text 7</div>
+      <div className="text-box">Person: Dr. Jane Doe, Expert in AI</div>
+      <div className="text-box">Object: Whiteboard with diagrams</div>
+      <div className="text-box">Text: "Artificial Intelligence Trends in 2024"</div>
     </div>
   );
 }

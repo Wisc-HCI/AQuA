@@ -1,23 +1,28 @@
 .App {
   display: grid;
   grid-template-rows: auto auto auto;
-  gap: 10px;
+  gap: 20px;
   padding: 20px;
   font-family: 'Arial', sans-serif;
+  background-color: #f0f2f5;
 }
 
 .top-section {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  gap: 20px;
 }
 
 .middle-section, .bottom-section {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.middle-section {
+  grid-column: 1 / -1;
 }
 
 .bottom-section {
-  grid-template-columns: repeat(3, 1fr);
+  grid-column: 1 / -1;
 }

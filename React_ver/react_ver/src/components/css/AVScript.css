@@ -1,11 +1,9 @@
 .av-script-container {
-  background-color: #f9f9f9;
+  background-color: #fff;
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 20px;
-  margin: 20px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  font-family: 'Arial', sans-serif;
 }
 
 .av-script-container h2 {
@@ -14,4 +12,10 @@
   margin-bottom: 10px;
   border-bottom: 2px solid #FF9800;
   padding-bottom: 5px;
+}
+
+.av-script-container p {
+  font-size: 1em;
+  color: #555;
+  line-height: 1.6;
 }
