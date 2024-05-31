@@ -1,0 +1,26 @@
+.transcript-container {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  font-family: 'Arial', sans-serif;
+}
+
+.text-box {
+  flex: 1;
+  padding: 10px;
+  margin: 5px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.highlighted {
+  background-color: yellow;
+}

@@ -1,24 +1,30 @@
 import React from 'react';
 import './App.css';
 import VideoDisplay from './components/VideoDisplay';
-import Overview from './components/Overview';
-import Timeline from './components/Timeline';
-import AdditionalInfo from './components/AdditionalInfo';
+import AVScript from './components/AVScript';
+import Prompting from './components/Prompting';
+import Transcript from './components/Transcript';
+import ObjectInfo from './components/ObjectInfo';
 
 function App() {
   return (
     <div className="App">
-      <div className="part1">
-        <VideoDisplay />
+      <div className="top-section">
+        <div className="video">
+          <VideoDisplay />
+        </div>
+        <div className="av-script">
+          <AVScript />
+        </div>
+        <div className="prompting">
+          <Prompting />
+        </div>
       </div>
-      <div className="part2">
-        <Overview />
+      <div className="middle-section">
+        <Transcript />
       </div>
-      <div className="part3">
-        <Timeline />
-      </div>
-      <div className="part4">
-        <AdditionalInfo />
+      <div className="bottom-section">
+        <ObjectInfo />
       </div>
     </div>
   );
