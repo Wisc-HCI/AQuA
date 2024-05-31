@@ -6,17 +6,27 @@
   margin: 0 20px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   font-family: 'Arial', sans-serif;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
 }
 
 .text-box {
+  flex: 1;
   padding: 10px;
-  margin: 10px 0;
+  margin: 5px;
   background-color: #f9f9f9;
   border: 1px solid #ddd;
   border-radius: 8px;
-  text-align: left;
+  text-align: center;
   font-size: 1em;
   color: #333;
+  transition: background-color 0.3s;
+  cursor: pointer;
+}
+
+.text-box:hover {
+  background-color: #e0e0e0;
 }
 
 .highlighted {

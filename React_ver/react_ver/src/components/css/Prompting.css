@@ -1,21 +1,37 @@
 .prompting-container {
-  background-color: #fff;
+  background-color: #f9f9f9;
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  font-family: 'Arial', sans-serif;
 }
 
 .prompting-container h2 {
   font-size: 1.5em;
   color: #333;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
   border-bottom: 2px solid #4CAF50;
   padding-bottom: 5px;
 }
 
-.prompting-container p {
-  font-size: 1em;
+.qa-pair {
+  margin-bottom: 20px;
+}
+
+.question {
+  background-color: #e0e0e0;
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.answer {
+  background-color: #fff;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
   color: #555;
-  line-height: 1.6;
 }
