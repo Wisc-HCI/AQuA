@@ -8,9 +8,14 @@
 }
 
 .top-section {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
   gap: 20px;
+}
+
+.top-section > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .middle-section, .bottom-section {

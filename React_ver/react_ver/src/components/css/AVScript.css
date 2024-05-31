@@ -3,8 +3,11 @@
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 20px;
+  margin: 0;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  font-family: 'Arial', sans-serif;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
 }
 
 .av-script-container h2 {
