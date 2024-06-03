@@ -1,6 +1,6 @@
 .App {
   display: grid;
-  grid-template-rows: auto auto auto;
+  grid-template-rows: 1fr auto auto;
   gap: 20px;
   padding: 20px;
   font-family: 'Arial', sans-serif;
@@ -10,6 +10,7 @@
 .top-section {
   display: flex;
   gap: 20px;
+  height: 500px; /* Set the desired height for the top section */
 }
 
 .top-section > div {
