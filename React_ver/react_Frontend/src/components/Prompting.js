@@ -1,24 +1,38 @@
-import React from 'react';
+import React, { useState } from 'react';
+import axios from 'axios';
 import './css/Prompting.css';
 
 function Prompting() {
-  return (
-    <div className="prompting-container">
-      <h2>Prompting</h2>
-      <div className="qa-pair">
-        <div className="question">Q: What are the main topics covered in this video?</div>
-        <div className="answer">A: The main topics covered include AI trends, expert interviews, and detailed analysis of AI advancements.</div>
-      </div>
-      <div className="qa-pair">
-        <div className="question">Q: Can you provide an analysis of the key points discussed?</div>
-        <div className="answer">A: Sure, the key points include the significance of AI in 2024, expert opinions, and future predictions.</div>
-      </div>
-      <div className="qa-pair">
-        <div className="question">Q: Summarize the expert opinions presented in the video.</div>
-        <div className="answer">A: Experts believe that AI will revolutionize various industries, with significant advancements in machine learning and data processing.</div>
-      </div>
-    </div>
-  );
+    const [question, setQuestion] = useState('');
+    const [answer, setAnswer] = useState('');
+
+    const handleQuestionChange = (e) => {
+        setQuestion(e.target.value);
+    };
+
+    const handleAskQuestion = () => {
+        axios.post('http://localhost:5000/ask-question', { question })
+            .then(response => {
+                setAnswer(response.data.answer);
+            })
+            .catch(error => {
+                console.error('There was an error asking the question!', error);
+            });
+    };
+
+    return (
+        <div className="prompting-container">
+            <h2>Prompting</h2>
+            <input 
+                type="text" 
+                value={question} 
+                onChange={handleQuestionChange} 
+                placeholder="Ask a question..."
+            />
+            <button onClick={handleAskQuestion}>Ask</button>
+            {answer && <p>{answer}</p>}
+        </div>
+    );
 }
 
 export default Prompting;
