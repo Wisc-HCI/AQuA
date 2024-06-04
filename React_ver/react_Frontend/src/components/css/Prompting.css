@@ -7,8 +7,8 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  flex-grow: 1;
-  overflow-y: auto; /* Add vertical scroll bar */
+  height: 400px; /* Set fixed height */
+  overflow-y: auto; /* Add vertical scroll if content overflows */
 }
 
 .prompting-container h2 {
@@ -19,24 +19,35 @@
   padding-bottom: 5px;
 }
 
-.qa-pair {
-  margin-bottom: 20px;
-}
-
-.question {
-  background-color: #e0e0e0;
+input[type="text"] {
   padding: 10px;
+  font-size: 1em;
+  border: 1px solid #ddd;
   border-radius: 8px;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 5px;
+  margin-bottom: 10px;
 }
 
-.answer {
-  background-color: #fff;
+button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 1em;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #43a047;
+}
+
+p {
+  font-size: 1em;
+  color: #555;
+  margin-top: 20px;
   padding: 10px;
+  background-color: #f9f9f9;
   border-radius: 8px;
   border: 1px solid #ddd;
-  color: #555;
-  flex-grow: 1;
 }

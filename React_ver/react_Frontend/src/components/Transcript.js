@@ -1,5 +1,6 @@
 import React from 'react';
 import './css/Transcript.css';
+import TimelineSlider from 'react-timeline-slider';
 
 function Transcript() {
     const handleClick = (text) => {

@@ -7,21 +7,36 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  flex-grow: 1;
-  overflow: hidden;
+  height: 400px; /* Set fixed height */
+  overflow-y: auto; /* Add vertical scroll if content overflows */
 }
 
 .video-header {
   font-size: 1.5em;
   color: #333;
-  margin-bottom: 10px;
-  border-bottom: 2px solid #2196F3;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #4CAF50;
   padding-bottom: 5px;
+  /*text-align: center;*/
 }
 
-.video-element {
-  width: 100%;
+input[type="file"] {
+  margin: 20px 0;
+  padding: 10px;
+  font-size: 1em;
+}
+
+button {
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 1em;
   border-radius: 8px;
-  outline: none;
-  flex-grow: 1;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #1e88e5;
 }
