@@ -1,5 +1,5 @@
 import React from 'react';
-import './css/ObjectInfo.css';
+import '../css/ObjectInfo.css';
 
 function ObjectInfo() {
   return (

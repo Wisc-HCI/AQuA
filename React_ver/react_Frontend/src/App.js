@@ -3,8 +3,8 @@ import './App.css';
 import VideoDisplay from './components/VideoDisplay';
 import AVScript from './components/AVScript';
 import Prompting from './components/Prompting';
-import Transcript from './components/Transcript';
-import ObjectInfo from './components/ObjectInfo';
+import Transcript from './components/Transcript_ObjectInfo/Transcript';
+import ObjectInfo from './components/Transcript_ObjectInfo/ObjectInfo';
 
 function App() {
   return (
