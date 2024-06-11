@@ -1,0 +1,11 @@
+# Ignore media directory
+media/
+
+# Ignore models directory
+models/
+
+# Ignore outputs directory
+outputs/
+
+# Ignore all gettysburg files
+gettysburg.*

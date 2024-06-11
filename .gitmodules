@@ -1,0 +1,3 @@
+[submodule "Pipeline/Detic"]
+	path = Pipeline/Detic
+	url = https://github.com/KssNikhil2002/Detic.git
