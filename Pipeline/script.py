@@ -33,28 +33,31 @@ def run_detic(video_file, words):
 
     subprocess.run(detic_demo_command, shell=True, cwd='Detic')
 
-def main(audio_file, video_file):
+def main(audio_file, video_file, custom_nouns=None):
 
     generate_transcript(audio_file=audio_file)
 
     audio_filename = os.path.basename(audio_file)
     transcript_file = os.path.splitext(audio_filename)[0] + '.txt'
 
-    nouns = extract_nouns(transcript_file=transcript_file)
+    if custom_nouns:
+        nouns = custom_nouns.split(',')
+    else:
+        nouns = extract_nouns(transcript_file=transcript_file)
 
     print("Extracted Nouns", nouns)
 
-    nouns1 = ["pencil","person","watch"]
-    run_detic(video_file=video_file, words=nouns1)
+    # nouns1 = ["pencil","person","watch"]
+    run_detic(video_file=video_file, words=nouns)
 
 
 if __name__ == "__main__":
-    import argparse
     
     parser = argparse.ArgumentParser(description="Process an audio file and extract nouns from the transcript.")
     parser.add_argument("--audio_file", required=True, help="The path to the audio file.")
     parser.add_argument("--video_file", required=True, help="The path to the video file.")
+    parser.add_argument("--custom_nouns", help="Optional custom nouns as comma-separated values to use instead of extracted ones.")
     
     args = parser.parse_args()
     
-    main(args.audio_file, args.video_file)
+    main(args.audio_file, args.video_file, args.custom_nouns)
