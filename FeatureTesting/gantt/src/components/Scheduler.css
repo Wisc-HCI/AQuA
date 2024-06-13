@@ -1,0 +1,31 @@
+.scheduler-container {
+    margin: 20px;
+  }
+  
+  .task-green {
+    background-color: #8bc34a !important;
+    color: white;
+  }
+  
+  .task-blue {
+    background-color: #3f51b5 !important;
+    color: white;
+  }
+  
+  .task-light-blue {
+    background-color: #03a9f4 !important;
+    color: white;
+  }
+  
+  .task-orange {
+    background-color: #ff9800 !important;
+    color: white;
+  }
+  
+  .task {
+    border-radius: 4px;
+    padding: 5px;
+    text-align: center;
+    font-weight: bold;
+  }
+  
