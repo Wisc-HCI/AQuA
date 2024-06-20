@@ -1,31 +1,86 @@
 .scheduler-container {
-    margin: 20px;
-  }
-  
-  .task-green {
-    background-color: #8bc34a !important;
-    color: white;
-  }
-  
-  .task-blue {
-    background-color: #3f51b5 !important;
-    color: white;
-  }
-  
-  .task-light-blue {
-    background-color: #03a9f4 !important;
-    color: white;
-  }
-  
-  .task-orange {
-    background-color: #ff9800 !important;
-    color: white;
-  }
-  
-  .task {
-    border-radius: 4px;
-    padding: 5px;
-    text-align: center;
-    font-weight: bold;
-  }
-  
+  margin: 20px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.add-button {
+  display: flex;
+  align-items: center;
+  background-color: #4CAF50;
+  color: white;
+  padding: 10px;
+  border: none;
+  cursor: pointer;
+}
+
+.add-button:hover {
+  background-color: #45a049;
+}
+
+.add-button svg {
+  margin-right: 5px;
+}
+
+.task-green {
+  background-color: green;
+  color: white;
+}
+
+.task-blue {
+  background-color: blue;
+  color: white;
+}
+
+.task-light-blue {
+  background-color: lightblue;
+  color: black;
+}
+
+.task-orange {
+  background-color: orange;
+  color: white;
+}
+
+.task-new {
+  background-color: lightgreen;
+  color: black;
+}
+
+/* Modal Styles */
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  margin-right: -50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+.modal button {
+  margin-right: 10px;
+}
+
+.modal form {
+  display: flex;
+  flex-direction: column;
+}
