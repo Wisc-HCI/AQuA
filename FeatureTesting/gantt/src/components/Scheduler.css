@@ -13,9 +13,11 @@
   align-items: center;
   background-color: #4CAF50;
   color: white;
-  padding: 10px;
+  padding: 10px 15px;
   border: none;
+  border-radius: 5px;
   cursor: pointer;
+  font-size: 16px;
 }
 
 .add-button:hover {
@@ -64,6 +66,9 @@
   padding: 20px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   z-index: 1000;
+  border-radius: 10px;
+  width: 400px;
+  max-width: 80%;
 }
 
 .overlay {
@@ -76,11 +81,72 @@
   z-index: 999;
 }
 
-.modal button {
-  margin-right: 10px;
+.modal-title {
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 24px;
+  color: #333;
 }
 
-.modal form {
+.modal-form {
   display: flex;
   flex-direction: column;
+}
+
+.modal-form-group {
+  margin-bottom: 15px;
+}
+
+.modal-form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #555;
+}
+
+.modal-form-group input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: space-between;
+}
+
+.modal-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.save-button {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.save-button:hover {
+  background-color: #45a049;
+}
+
+.delete-button {
+  background-color: #f44336;
+  color: white;
+}
+
+.delete-button:hover {
+  background-color: #e53935;
+}
+
+.cancel-button {
+  background-color: #9e9e9e;
+  color: white;
+}
+
+.cancel-button:hover {
+  background-color: #757575;
 }

@@ -158,33 +158,35 @@ const Scheduler = () => {
         className="modal"
         overlayClassName="overlay"
       >
-        <h2>{isAdding ? 'Add Task' : `Edit ${currentTask ? 'Task' : 'Group'}`}</h2>
-        <form onSubmit={handleEditSubmit}>
-          <label>
-            Title:
+        <h2 className="modal-title">{isAdding ? 'Add Task' : `Edit ${currentTask ? 'Task' : 'Group'}`}</h2>
+        <form onSubmit={handleEditSubmit} className="modal-form">
+          <div className="modal-form-group">
+            <label htmlFor="title">Title:</label>
             <input type="text" name="title" defaultValue={currentTask ? currentTask.title : currentGroup ? currentGroup.title : ''} required />
-          </label>
+          </div>
           {isAdding && (
             <>
-              <label>
-                Group ID:
+              <div className="modal-form-group">
+                <label htmlFor="groupId">Group ID:</label>
                 <input type="number" name="groupId" required />
-              </label>
-              <label>
-                Start Time:
+              </div>
+              <div className="modal-form-group">
+                <label htmlFor="startTime">Start Time:</label>
                 <input type="datetime-local" name="startTime" required />
-              </label>
-              <label>
-                End Time:
+              </div>
+              <div className="modal-form-group">
+                <label htmlFor="endTime">End Time:</label>
                 <input type="datetime-local" name="endTime" required />
-              </label>
+              </div>
             </>
           )}
-          <button type="submit">Save</button>
-          {!isAdding && (
-            <button type="button" onClick={handleDelete}><FaTrash /> Delete</button>
-          )}
-          <button type="button" onClick={closeModal}>Cancel</button>
+          <div className="modal-buttons">
+            <button type="submit" className="modal-button save-button">Save</button>
+            {!isAdding && (
+              <button type="button" className="modal-button delete-button" onClick={handleDelete}><FaTrash /> Delete</button>
+            )}
+            <button type="button" className="modal-button cancel-button" onClick={closeModal}>Cancel</button>
+          </div>
         </form>
       </Modal>
     </div>
