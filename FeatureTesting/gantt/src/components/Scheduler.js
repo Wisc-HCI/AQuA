@@ -32,39 +32,40 @@ const Scheduler = () => {
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState(null);
   const [currentGroup, setCurrentGroup] = useState(null);
-  const [isNewTask, setIsNewTask] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
 
-  const openModal = (taskOrGroup, isNew = false) => {
-    setCurrentTask(taskOrGroup.type === 'task' ? taskOrGroup : null);
-    setCurrentGroup(taskOrGroup.type === 'group' ? taskOrGroup : null);
+  const openModal = (taskOrGroup) => {
+    setCurrentTask(taskOrGroup && taskOrGroup.type === 'task' ? taskOrGroup : null);
+    setCurrentGroup(taskOrGroup && taskOrGroup.type === 'group' ? taskOrGroup : null);
     setModalIsOpen(true);
-    setIsNewTask(isNew);
   };
 
   const closeModal = () => {
     setModalIsOpen(false);
     setCurrentTask(null);
     setCurrentGroup(null);
-    setIsNewTask(false);
+    setIsAdding(false);
   };
 
   const handleEditSubmit = (e) => {
     e.preventDefault();
     const newTitle = e.target.elements.title.value;
-    const group = parseInt(e.target.elements.group.value);
-    const startTime = moment(e.target.elements.start_time.value);
-    const endTime = moment(e.target.elements.end_time.value);
 
-    if (isNewTask) {
-      const newTask = {
+    if (isAdding) {
+      const groupId = parseInt(e.target.elements.groupId.value, 10);
+      const startTime = moment(e.target.elements.startTime.value);
+      const endTime = moment(e.target.elements.endTime.value);
+
+      const newItem = {
         id: items.length + 1,
-        group: group,
+        group: groupId,
         title: newTitle,
         start_time: startTime,
         end_time: endTime,
-        className: 'task-green', // Adjust the class name as needed
+        className: 'task-new'
       };
-      setItems([...items, newTask]);
+
+      setItems([...items, newItem]);
     } else {
       if (currentTask) {
         setItems(items.map(item => item.id === currentTask.id ? { ...item, title: newTitle } : item));
@@ -101,15 +102,16 @@ const Scheduler = () => {
     openModal({ ...group, type: 'group' });
   };
 
-  const openNewTaskModal = () => {
-    openModal({ type: 'task' }, true);
+  const handleAddTask = () => {
+    setIsAdding(true);
+    setModalIsOpen(true);
   };
 
   return (
     <div className="scheduler-container">
       <div className="header">
         <h2>Scheduler</h2>
-        <button className="add-task-button" onClick={openNewTaskModal}><FaPlus /> Add Task</button>
+        <button onClick={handleAddTask} className="add-button"><FaPlus /> Add Task</button>
       </div>
       <Timeline
         groups={groups.map(group => ({
@@ -156,34 +158,30 @@ const Scheduler = () => {
         className="modal"
         overlayClassName="overlay"
       >
-        <h2>{isNewTask ? 'Add New Task' : `Edit ${currentTask ? 'Task' : 'Group'}`}</h2>
+        <h2>{isAdding ? 'Add Task' : `Edit ${currentTask ? 'Task' : 'Group'}`}</h2>
         <form onSubmit={handleEditSubmit}>
           <label>
             Title:
             <input type="text" name="title" defaultValue={currentTask ? currentTask.title : currentGroup ? currentGroup.title : ''} required />
           </label>
-          {isNewTask && (
+          {isAdding && (
             <>
               <label>
-                Group:
-                <select name="group" required>
-                  {groups.map(group => (
-                    <option key={group.id} value={group.id}>{group.title}</option>
-                  ))}
-                </select>
+                Group ID:
+                <input type="number" name="groupId" required />
               </label>
               <label>
                 Start Time:
-                <input type="datetime-local" name="start_time" required />
+                <input type="datetime-local" name="startTime" required />
               </label>
               <label>
                 End Time:
-                <input type="datetime-local" name="end_time" required />
+                <input type="datetime-local" name="endTime" required />
               </label>
             </>
           )}
           <button type="submit">Save</button>
-          {!isNewTask && (
+          {!isAdding && (
             <button type="button" onClick={handleDelete}><FaTrash /> Delete</button>
           )}
           <button type="button" onClick={closeModal}>Cancel</button>
