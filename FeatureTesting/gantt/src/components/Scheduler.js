@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import Timeline from 'react-calendar-timeline';
 import moment from 'moment';
+import Modal from 'react-modal';
+import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
 import 'react-calendar-timeline/lib/Timeline.css';
 import './Scheduler.css';
+
+Modal.setAppElement('#root'); // Adjust if your root element ID is different
 
 const Scheduler = () => {
   const [groups, setGroups] = useState([
@@ -25,33 +29,93 @@ const Scheduler = () => {
     // Add more tasks similarly...
   ]);
 
-  const handleItemMove = (itemId, dragTime, newGroupOrder) => {
-    const group = groups[newGroupOrder];
-    const newItems = items.map(item => 
-      item.id === itemId
-        ? { ...item, start_time: moment(dragTime), end_time: moment(dragTime).add(item.end_time.diff(item.start_time)), group: group.id }
-        : item
-    );
-    setItems(newItems);
+  const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [currentTask, setCurrentTask] = useState(null);
+  const [currentGroup, setCurrentGroup] = useState(null);
+  const [isNewTask, setIsNewTask] = useState(false);
+
+  const openModal = (taskOrGroup, isNew = false) => {
+    setCurrentTask(taskOrGroup.type === 'task' ? taskOrGroup : null);
+    setCurrentGroup(taskOrGroup.type === 'group' ? taskOrGroup : null);
+    setModalIsOpen(true);
+    setIsNewTask(isNew);
   };
 
-  const handleItemResize = (itemId, time, edge) => {
-    const newItems = items.map(item => 
-      item.id === itemId
-        ? { ...item, [edge]: moment(time) }
-        : item
-    );
-    setItems(newItems);
+  const closeModal = () => {
+    setModalIsOpen(false);
+    setCurrentTask(null);
+    setCurrentGroup(null);
+    setIsNewTask(false);
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    const newTitle = e.target.elements.title.value;
+    const group = parseInt(e.target.elements.group.value);
+    const startTime = moment(e.target.elements.start_time.value);
+    const endTime = moment(e.target.elements.end_time.value);
+
+    if (isNewTask) {
+      const newTask = {
+        id: items.length + 1,
+        group: group,
+        title: newTitle,
+        start_time: startTime,
+        end_time: endTime,
+        className: 'task-green', // Adjust the class name as needed
+      };
+      setItems([...items, newTask]);
+    } else {
+      if (currentTask) {
+        setItems(items.map(item => item.id === currentTask.id ? { ...item, title: newTitle } : item));
+      }
+
+      if (currentGroup) {
+        setGroups(groups.map(group => group.id === currentGroup.id ? { ...group, title: newTitle } : group));
+      }
+    }
+
+    closeModal();
+  };
+
+  const handleDelete = () => {
+    if (currentTask) {
+      setItems(items.filter(item => item.id !== currentTask.id));
+    }
+
+    if (currentGroup) {
+      setGroups(groups.filter(group => group.id !== currentGroup.id));
+      setItems(items.filter(item => item.group !== currentGroup.id));
+    }
+
+    closeModal();
   };
 
   const handleItemSelect = (itemId) => {
-    // Implement item edit/delete/split logic here
+    const task = items.find(item => item.id === itemId);
+    openModal({ ...task, type: 'task' });
+  };
+
+  const handleGroupEdit = (groupId) => {
+    const group = groups.find(group => group.id === groupId);
+    openModal({ ...group, type: 'group' });
+  };
+
+  const openNewTaskModal = () => {
+    openModal({ type: 'task' }, true);
   };
 
   return (
     <div className="scheduler-container">
+      <div className="header">
+        <h2>Scheduler</h2>
+        <button className="add-task-button" onClick={openNewTaskModal}><FaPlus /> Add Task</button>
+      </div>
       <Timeline
-        groups={groups}
+        groups={groups.map(group => ({
+          ...group,
+          rightTitle: <FaEdit onClick={() => handleGroupEdit(group.id)} />
+        }))}
         items={items}
         defaultTimeStart={moment('2024-06-26 05:00')}
         defaultTimeEnd={moment('2024-06-26 17:00')}
@@ -66,10 +130,65 @@ const Scheduler = () => {
         sidebarContent={<div>Label</div>}
         canMove={true}
         canResize={"both"}
-        onItemMove={handleItemMove}
-        onItemResize={handleItemResize}
+        onItemMove={(itemId, dragTime, newGroupOrder) => {
+          const group = groups[newGroupOrder];
+          const newItems = items.map(item => 
+            item.id === itemId
+              ? { ...item, start_time: moment(dragTime), end_time: moment(dragTime).add(item.end_time.diff(item.start_time)), group: group.id }
+              : item
+          );
+          setItems(newItems);
+        }}
+        onItemResize={(itemId, time, edge) => {
+          const newItems = items.map(item => 
+            item.id === itemId
+              ? { ...item, [edge]: moment(time) }
+              : item
+          );
+          setItems(newItems);
+        }}
         onItemSelect={handleItemSelect}
       />
+      <Modal
+        isOpen={modalIsOpen}
+        onRequestClose={closeModal}
+        contentLabel="Edit Task or Group"
+        className="modal"
+        overlayClassName="overlay"
+      >
+        <h2>{isNewTask ? 'Add New Task' : `Edit ${currentTask ? 'Task' : 'Group'}`}</h2>
+        <form onSubmit={handleEditSubmit}>
+          <label>
+            Title:
+            <input type="text" name="title" defaultValue={currentTask ? currentTask.title : currentGroup ? currentGroup.title : ''} required />
+          </label>
+          {isNewTask && (
+            <>
+              <label>
+                Group:
+                <select name="group" required>
+                  {groups.map(group => (
+                    <option key={group.id} value={group.id}>{group.title}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Start Time:
+                <input type="datetime-local" name="start_time" required />
+              </label>
+              <label>
+                End Time:
+                <input type="datetime-local" name="end_time" required />
+              </label>
+            </>
+          )}
+          <button type="submit">Save</button>
+          {!isNewTask && (
+            <button type="button" onClick={handleDelete}><FaTrash /> Delete</button>
+          )}
+          <button type="button" onClick={closeModal}>Cancel</button>
+        </form>
+      </Modal>
     </div>
   );
 };
