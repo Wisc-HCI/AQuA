@@ -38,3 +38,6 @@ const GanttChart = ({ tasks }) => {
 };
 
 export default GanttChart;
+
+
+//this file is not being used anymore
