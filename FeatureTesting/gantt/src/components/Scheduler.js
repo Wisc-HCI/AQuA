@@ -116,7 +116,12 @@ const Scheduler = () => {
       <Timeline
         groups={groups.map(group => ({
           ...group,
-          rightTitle: <FaEdit onClick={() => handleGroupEdit(group.id)} />
+          title: (
+            <div className="group-title">
+              {group.title}
+              <FaEdit onClick={() => handleGroupEdit(group.id)} className="edit-icon" />
+            </div>
+          )
         }))}
         items={items}
         defaultTimeStart={moment('2024-06-26 05:00')}
