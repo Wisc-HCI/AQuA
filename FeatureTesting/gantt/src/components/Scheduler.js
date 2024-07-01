@@ -111,8 +111,9 @@ const Scheduler = () => {
     openModal({ ...group, type: 'group' });
   };
 
-  const handleAddTask = () => {
+  const handleAddTask = (groupId) => {
     setIsAddingTask(true);
+    setCurrentGroup({ id: groupId });
     setModalIsOpen(true);
   };
 
@@ -125,10 +126,7 @@ const Scheduler = () => {
     <div className="scheduler-container">
       <div className="header">
         <h2>Scheduler</h2>
-        <div className="add-buttons">
-          <button onClick={handleAddTask} className="add-button"><FaPlus /> Add Task</button>
-          <button onClick={handleAddGroup} className="add-button"><FaPlus /> Add Group</button>
-        </div>
+        <button onClick={handleAddGroup} className="add-button"><FaPlus /> Add Group</button>
       </div>
       <Timeline
         groups={groups.map(group => ({
@@ -136,7 +134,10 @@ const Scheduler = () => {
           title: (
             <div className="group-title">
               {group.title}
-              <FaEdit onClick={() => handleGroupEdit(group.id)} className="edit-icon" />
+              <div className="group-icons">
+                <FaEdit onClick={() => handleGroupEdit(group.id)} className="edit-icon" />
+                <FaPlus onClick={() => handleAddTask(group.id)} className="add-task-icon" />
+              </div>
             </div>
           )
         }))}
@@ -190,7 +191,7 @@ const Scheduler = () => {
             <>
               <div className="modal-form-group">
                 <label htmlFor="groupId">Group ID:</label>
-                <input type="number" name="groupId" required />
+                <input type="number" name="groupId" defaultValue={currentGroup ? currentGroup.id : ''} required />
               </div>
               <div className="modal-form-group">
                 <label htmlFor="startTime">Start Time:</label>
