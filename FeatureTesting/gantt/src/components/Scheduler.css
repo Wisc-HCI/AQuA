@@ -64,6 +64,11 @@
   align-items: center;
 }
 
+.group-icons {
+  display: flex;
+  align-items: center;
+}
+
 .edit-icon, .add-task-icon {
   margin-left: 10px;
   cursor: pointer;

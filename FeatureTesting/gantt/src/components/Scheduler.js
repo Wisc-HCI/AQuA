@@ -126,7 +126,6 @@ const Scheduler = () => {
     <div className="scheduler-container">
       <div className="header">
         <h2>Scheduler</h2>
-        <button onClick={handleAddGroup} className="add-button"><FaPlus /> Add Group</button>
       </div>
       <Timeline
         groups={groups.map(group => ({
@@ -174,6 +173,7 @@ const Scheduler = () => {
         }}
         onItemSelect={handleItemSelect}
       />
+      <button onClick={handleAddGroup} className="add-group-button"><FaPlus /> Add Group</button>
       <Modal
         isOpen={modalIsOpen}
         onRequestClose={closeModal}
