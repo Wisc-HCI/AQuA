@@ -32,7 +32,8 @@ const Scheduler = () => {
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState(null);
   const [currentGroup, setCurrentGroup] = useState(null);
-  const [isAdding, setIsAdding] = useState(false);
+  const [isAddingTask, setIsAddingTask] = useState(false);
+  const [isAddingGroup, setIsAddingGroup] = useState(false);
 
   const openModal = (taskOrGroup) => {
     setCurrentTask(taskOrGroup && taskOrGroup.type === 'task' ? taskOrGroup : null);
@@ -44,14 +45,15 @@ const Scheduler = () => {
     setModalIsOpen(false);
     setCurrentTask(null);
     setCurrentGroup(null);
-    setIsAdding(false);
+    setIsAddingTask(false);
+    setIsAddingGroup(false);
   };
 
   const handleEditSubmit = (e) => {
     e.preventDefault();
     const newTitle = e.target.elements.title.value;
 
-    if (isAdding) {
+    if (isAddingTask) {
       const groupId = parseInt(e.target.elements.groupId.value, 10);
       const startTime = moment(e.target.elements.startTime.value);
       const endTime = moment(e.target.elements.endTime.value);
@@ -66,6 +68,13 @@ const Scheduler = () => {
       };
 
       setItems([...items, newItem]);
+    } else if (isAddingGroup) {
+      const newGroup = {
+        id: groups.length + 1,
+        title: newTitle
+      };
+
+      setGroups([...groups, newGroup]);
     } else {
       if (currentTask) {
         setItems(items.map(item => item.id === currentTask.id ? { ...item, title: newTitle } : item));
@@ -103,7 +112,12 @@ const Scheduler = () => {
   };
 
   const handleAddTask = () => {
-    setIsAdding(true);
+    setIsAddingTask(true);
+    setModalIsOpen(true);
+  };
+
+  const handleAddGroup = () => {
+    setIsAddingGroup(true);
     setModalIsOpen(true);
   };
 
@@ -111,7 +125,10 @@ const Scheduler = () => {
     <div className="scheduler-container">
       <div className="header">
         <h2>Scheduler</h2>
-        <button onClick={handleAddTask} className="add-button"><FaPlus /> Add Task</button>
+        <div className="add-buttons">
+          <button onClick={handleAddTask} className="add-button"><FaPlus /> Add Task</button>
+          <button onClick={handleAddGroup} className="add-button"><FaPlus /> Add Group</button>
+        </div>
       </div>
       <Timeline
         groups={groups.map(group => ({
@@ -163,13 +180,13 @@ const Scheduler = () => {
         className="modal"
         overlayClassName="overlay"
       >
-        <h2 className="modal-title">{isAdding ? 'Add Task' : `Edit ${currentTask ? 'Task' : 'Group'}`}</h2>
+        <h2 className="modal-title">{isAddingTask ? 'Add Task' : isAddingGroup ? 'Add Group' : `Edit ${currentTask ? 'Task' : 'Group'}`}</h2>
         <form onSubmit={handleEditSubmit} className="modal-form">
           <div className="modal-form-group">
             <label htmlFor="title">Title:</label>
             <input type="text" name="title" defaultValue={currentTask ? currentTask.title : currentGroup ? currentGroup.title : ''} required />
           </div>
-          {isAdding && (
+          {isAddingTask && (
             <>
               <div className="modal-form-group">
                 <label htmlFor="groupId">Group ID:</label>
@@ -187,7 +204,7 @@ const Scheduler = () => {
           )}
           <div className="modal-buttons">
             <button type="submit" className="modal-button save-button">Save</button>
-            {!isAdding && (
+            {!isAddingTask && !isAddingGroup && (
               <button type="button" className="modal-button delete-button" onClick={handleDelete}><FaTrash /> Delete</button>
             )}
             <button type="button" className="modal-button cancel-button" onClick={closeModal}>Cancel</button>

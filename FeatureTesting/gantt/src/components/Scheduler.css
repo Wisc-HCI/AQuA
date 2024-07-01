@@ -53,6 +53,17 @@
   color: black;
 }
 
+.group-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.edit-icon {
+  margin-left: 10px;
+  cursor: pointer;
+}
+
 /* Modal Styles */
 .modal {
   position: fixed;
@@ -67,7 +78,7 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   z-index: 1000;
   border-radius: 10px;
-  width: 400px;
+  width: 500px;
   max-width: 80%;
 }
 
