@@ -13,12 +13,12 @@ const Scheduler = () => {
     { id: 1, title: 'Writing Instruments', children: [2, 3] },
     { id: 2, title: 'Pen' },
     { id: 3, title: 'Pencil' },
-    { id: 4, title: 'Row #3' },
-    { id: 5, title: 'Row #4' },
-    { id: 6, title: 'Row #5' },
-    { id: 7, title: 'Row #6' },
-    { id: 8, title: 'Row #7' },
-    { id: 9, title: 'Row #8' },
+    { id: 4, title: 'Book' },
+    { id: 5, title: 'Desk' },
+    { id: 6, title: 'Smartphone' },
+    { id: 7, title: 'Laptop' },
+    { id: 8, title: 'Keyboard' },
+    { id: 9, title: 'Mouse' },
   ]);
 
   const [items, setItems] = useState([
@@ -173,7 +173,9 @@ const Scheduler = () => {
         }}
         onItemSelect={handleItemSelect}
       />
-      <button onClick={handleAddGroup} className="add-group-button"><FaPlus /> Add Group</button>
+      <div className="add-group-button-container">
+        <button onClick={handleAddGroup} className="add-group-button"><FaPlus /> Add Row</button>
+      </div>
       <Modal
         isOpen={modalIsOpen}
         onRequestClose={closeModal}
