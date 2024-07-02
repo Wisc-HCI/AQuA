@@ -45,12 +45,12 @@
   align-items: center;
   background-color: #4CAF50;
   color: white;
-  padding: 8px 12px;
+  padding: 8px 20px;
   border: none;
   border-radius: 5px;
   cursor: pointer;
   font-size: 14px;
-  width: 200px; /* Adjust this value to change the button's width */
+  width: 150px; /* Adjust this value to change the button's width */
 }
 
 .add-group-button:hover {
