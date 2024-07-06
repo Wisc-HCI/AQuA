@@ -8,8 +8,8 @@ from config import Config
 from flask_sqlalchemy import SQLAlchemy
 import io
 import logging
-
-
+from datetime import datetime
+import base64
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -26,6 +26,7 @@ class StorageModel(db.Model):
     audio_name = db.Column(db.String(100), nullable=True)  # New column for audio name
     audio_data = db.Column(db.LargeBinary, nullable=True)  # New column for audio data
     json_data = db.Column(db.JSON, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
 with app.app_context():
     db.create_all()
@@ -63,7 +64,44 @@ def upload_video():
 
         return jsonify({'message': 'Video and audio uploaded successfully'}), 201
     except Exception as e:
-        return jsonify({'error': 'Failed to upload video and audio', 'message': str(e)}), 500 
+        return jsonify({'error': 'Failed to upload video and audio', 'message': str(e)}), 500
+
+##================================================================================================================================================================================
+
+# @app.route('/video/name/<string:video_name>', methods=['GET']) ##get the video and audio based on the video name and return both the audio and video data
+# def get_video_by_name(video_name):
+#     try:
+#         logging.debug(f"Attempting to retrieve video: {video_name}")
+#         video = StorageModel.query.filter_by(video_name=video_name).first_or_404()
+#         logging.debug(f"Video found: {video.video_name}")
+#         return send_file(io.BytesIO(video.video_data), download_name=video.video_name, as_attachment=True)
+#     except Exception as e:
+#         logging.error(f"Error retrieving video by name: {e}")
+#         return jsonify({'error': 'Failed to retrieve video by name', 'message': str(e)}), 500
+
+##================================================================================================================================================================================
+
+@app.route('/video/recent', methods=['GET'])
+def get_most_recent_video():
+    try:
+        logging.debug("Attempting to retrieve the most recent video and audio")
+        video_record = StorageModel.query.order_by(StorageModel.created_at.desc()).first_or_404()
+        
+        video_data = video_record.video_data
+        audio_data = video_record.audio_data
+        
+        logging.debug(f"Most recent video and audio found: {video_record.video_name}")
+
+        return jsonify({
+            'video': base64.b64encode(video_data).decode('utf-8'),
+            'audio': base64.b64encode(audio_data).decode('utf-8')
+        })
+        
+    except Exception as e:
+        logging.error(f"Error retrieving the most recent video and audio: {e}")
+        return jsonify({'error': 'Failed to retrieve the most recent video and audio', 'message': str(e)}), 500
+
+##================================================================================================================================================================================
 
 @app.route('/update-json/<int:video_id>', methods=['PUT'])
 def update_json(video_id):
@@ -83,7 +121,7 @@ def update_json(video_id):
         return jsonify({'message': 'JSON data updated successfully'}), 200
     except Exception as e:
         return jsonify({'error': 'Failed to update JSON data', 'message': str(e)}), 500
-    
+
 @app.route('/run-script', methods=['POST'])
 def run_script():
     print("Running script")
