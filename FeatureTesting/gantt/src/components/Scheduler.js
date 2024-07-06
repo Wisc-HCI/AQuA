@@ -13,19 +13,19 @@ const Scheduler = () => {
     { id: 1, title: 'Writing Instruments', children: [2, 3] },
     { id: 2, title: 'Pen' },
     { id: 3, title: 'Pencil' },
-    { id: 4, title: 'Row #3' },
-    { id: 5, title: 'Row #4' },
-    { id: 6, title: 'Row #5' },
-    { id: 7, title: 'Row #6' },
-    { id: 8, title: 'Row #7' },
-    { id: 9, title: 'Row #8' },
+    { id: 4, title: 'Book' },
+    { id: 5, title: 'Desk' },
+    { id: 6, title: 'Smartphone' },
+    { id: 7, title: 'Laptop' },
+    { id: 8, title: 'Keyboard' },
+    { id: 9, title: 'Mouse' },
   ]);
 
   const [items, setItems] = useState([
-    { id: 1, group: 2, title: 'Task #38', start_time: moment('2024-06-26 06:00'), end_time: moment('2024-06-26 08:00'), className: 'task-green' },
-    { id: 2, group: 2, title: 'Task #99', start_time: moment('2024-06-26 07:00'), end_time: moment('2024-06-26 09:00'), className: 'task-blue' },
-    { id: 3, group: 3, title: 'Task #40', start_time: moment('2024-06-26 06:30'), end_time: moment('2024-06-26 10:00'), className: 'task-light-blue' },
-    { id: 4, group: 4, title: 'Task #31', start_time: moment('2024-06-26 08:00'), end_time: moment('2024-06-26 10:30'), className: 'task-orange' },
+    { id: 1, group: 2, title: 'Task #38', start_time: '06:00:00', end_time: '08:00:00', className: 'task-green' },
+    { id: 2, group: 2, title: 'Task #99', start_time: '07:00:00', end_time: '09:00:00', className: 'task-blue' },
+    { id: 3, group: 3, title: 'Task #40', start_time: '06:30:00', end_time: '10:00:00', className: 'task-light-blue' },
+    { id: 4, group: 4, title: 'Task #31', start_time: '08:00:00', end_time: '10:30:00', className: 'task-orange' },
     // Add more tasks similarly...
   ]);
 
@@ -55,8 +55,8 @@ const Scheduler = () => {
 
     if (isAddingTask) {
       const groupId = parseInt(e.target.elements.groupId.value, 10);
-      const startTime = moment(e.target.elements.startTime.value);
-      const endTime = moment(e.target.elements.endTime.value);
+      const startTime = e.target.elements.startTime.value + ':00';
+      const endTime = e.target.elements.endTime.value + ':00';
 
       const newItem = {
         id: items.length + 1,
@@ -140,16 +140,20 @@ const Scheduler = () => {
             </div>
           )
         }))}
-        items={items}
-        defaultTimeStart={moment('2024-06-26 05:00')}
-        defaultTimeEnd={moment('2024-06-26 17:00')}
-        timeSteps={{ second: 0, minute: 15, hour: 1, day: 1, month: 1, year: 1 }}
-        timeFormat="HH:mm"
+        items={items.map(item => ({
+          ...item,
+          start_time: moment(item.start_time, 'HH:mm:ss'),
+          end_time: moment(item.end_time, 'HH:mm:ss')
+        }))}
+        defaultTimeStart={moment('05:00:00', 'HH:mm:ss')}
+        defaultTimeEnd={moment('17:00:00', 'HH:mm:ss')}
+        timeSteps={{ second: 15, minute: 1, hour: 1, day: 1, month: 1, year: 1 }}
+        timeFormat="HH:mm:ss"
         headerLabelFormats={{
-          time: { long: 'HH:mm', medium: 'HH:mm', short: 'HH:mm' },
-          day: { long: 'HH:mm', medium: 'HH:mm', short: 'HH:mm' },
-          month: { long: 'HH:mm', medium: 'HH:mm', short: 'HH:mm' },
-          year: { long: 'HH:mm', medium: 'HH:mm', short: 'HH:mm' },
+          time: { long: 'HH:mm:ss', medium: 'HH:mm:ss', short: 'HH:mm:ss' },
+          day: { long: 'HH:mm:ss', medium: 'HH:mm:ss', short: 'HH:mm:ss' },
+          month: { long: 'HH:mm:ss', medium: 'HH:mm:ss', short: 'HH:mm:ss' },
+          year: { long: 'HH:mm:ss', medium: 'HH:mm:ss', short: 'HH:mm:ss' },
         }}
         sidebarContent={<div>Label</div>}
         canMove={true}
@@ -158,7 +162,7 @@ const Scheduler = () => {
           const group = groups[newGroupOrder];
           const newItems = items.map(item => 
             item.id === itemId
-              ? { ...item, start_time: moment(dragTime), end_time: moment(dragTime).add(item.end_time.diff(item.start_time)), group: group.id }
+              ? { ...item, start_time: moment(dragTime).format('HH:mm:ss'), end_time: moment(dragTime).add(moment(item.end_time, 'HH:mm:ss').diff(moment(item.start_time, 'HH:mm:ss'))).format('HH:mm:ss'), group: group.id }
               : item
           );
           setItems(newItems);
@@ -166,14 +170,16 @@ const Scheduler = () => {
         onItemResize={(itemId, time, edge) => {
           const newItems = items.map(item => 
             item.id === itemId
-              ? { ...item, [edge]: moment(time) }
+              ? { ...item, [edge]: moment(time).format('HH:mm:ss') }
               : item
           );
           setItems(newItems);
         }}
         onItemSelect={handleItemSelect}
       />
-      <button onClick={handleAddGroup} className="add-group-button"><FaPlus /> Add Group</button>
+      <div className="add-group-button-container">
+        <button onClick={handleAddGroup} className="add-group-button"><FaPlus /> Add Row</button>
+      </div>
       <Modal
         isOpen={modalIsOpen}
         onRequestClose={closeModal}
@@ -195,11 +201,11 @@ const Scheduler = () => {
               </div>
               <div className="modal-form-group">
                 <label htmlFor="startTime">Start Time:</label>
-                <input type="datetime-local" name="startTime" required />
+                <input type="time" name="startTime" step="1" required />
               </div>
               <div className="modal-form-group">
                 <label htmlFor="endTime">End Time:</label>
-                <input type="datetime-local" name="endTime" required />
+                <input type="time" name="endTime" step="1" required />
               </div>
             </>
           )}
@@ -217,3 +223,6 @@ const Scheduler = () => {
 };
 
 export default Scheduler;
+
+
+//why is the scheduler still showing the date?
