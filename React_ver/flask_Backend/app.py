@@ -21,8 +21,9 @@ logging.basicConfig(level=logging.DEBUG)
 
 class StorageModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    data = db.Column(db.LargeBinary, nullable=False)
+    video_name = db.Column(db.String(100), nullable=False)
+    video_data = db.Column(db.LargeBinary, nullable=False)
+    audio_name = db.Column(db.String(100), nullable=True)  # New column for audio name
     audio_data = db.Column(db.LargeBinary, nullable=True)  # New column for audio data
     json_data = db.Column(db.JSON, nullable=True)
 
