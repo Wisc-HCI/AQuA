@@ -29,7 +29,7 @@ function VideoDisplay({ setAvScript, setTimeline, setObjects }) {
     // //         });
     // // };
 
-    const runScript = async () => {
+    const runScript = async () => {  
         try {
             const response = await fetch('http://127.0.0.1:5000/run-script', {
                 method: 'POST',

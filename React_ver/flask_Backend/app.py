@@ -37,20 +37,25 @@ def home():
 @app.route('/upload', methods=['POST'])
 def upload_video():
     try:
-        # Paths to the video and audio files
-        video_file_path = os.path.join('../../pipeline/media/', 'demovid2.mp4')
-        audio_file_path = os.path.join('../../pipeline/media/', 'gettysburg.wav')
+        # Get the files from the request
+        video_file = request.files['video']
+        audio_file = request.files['audio']
 
-        # Read the video file
-        with open(video_file_path, 'rb') as video_file:
-            video_data = video_file.read()
+        # Read the video file data
+        video_data = video_file.read()
+        video_name = video_file.filename
 
-        # Read the audio file
-        with open(audio_file_path, 'rb') as audio_file:
-            audio_data = audio_file.read()
+        # Read the audio file data
+        audio_data = audio_file.read()
+        audio_name = audio_file.filename
 
         # Create a new Video instance with both video and audio data
-        new_video = StorageModel(name=os.path.basename(video_file_path), data=video_data, audio_data=audio_data)
+        new_video = StorageModel(
+            video_name=video_name,
+            video_data=video_data,
+            audio_name=audio_name,
+            audio_data=audio_data
+        )
         
         # Add the new video to the session and commit to the database
         db.session.add(new_video)
@@ -58,19 +63,8 @@ def upload_video():
 
         return jsonify({'message': 'Video and audio uploaded successfully'}), 201
     except Exception as e:
-        return jsonify({'error': 'Failed to upload video and audio', 'message': str(e)}), 500
+        return jsonify({'error': 'Failed to upload video and audio', 'message': str(e)}), 500 
 
-@app.route('/video/name/<string:video_name>', methods=['GET'])
-def get_video_by_name(video_name):
-    try:
-        logging.debug(f"Attempting to retrieve video: {video_name}")
-        video = StorageModel.query.filter_by(name=video_name).first_or_404()
-        logging.debug(f"Video found: {video.name}")
-        return send_file(io.BytesIO(video.data), download_name=video.name, as_attachment=True)
-    except Exception as e:
-        logging.error(f"Error retrieving video by name: {e}")
-        return jsonify({'error': 'Failed to retrieve video by name', 'message': str(e)}), 500
-    
 @app.route('/update-json/<int:video_id>', methods=['PUT'])
 def update_json(video_id):
     try:
