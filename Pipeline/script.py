@@ -4,6 +4,7 @@ import os
 import argparse
 import cv2
 import sys
+import json
 
 def generate_frames(video_path, output_folder):
     if not os.path.exists(output_folder):
@@ -69,6 +70,23 @@ def extract_nouns(transcript_file):
 
     nouns = set(token.text for token in doc if token.pos_ == "NOUN")
     return nouns
+
+
+def timestamped_nouns(nouns, filename):
+    with open(filename, 'r') as file:
+        data = json.load(file)
+    
+    noun_details = []
+    for segment in data['segments']:
+        for word in segment['words']:
+            if word['word'] in nouns:
+                noun_details.append({
+                    'word': word['word'],
+                    'start': word['start'],
+                    'end': word['end'],
+                    'score': word['score']
+                })
+    return noun_details
 
 def run_detic(video_file, words):
 
