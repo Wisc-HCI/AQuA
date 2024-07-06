@@ -223,3 +223,6 @@ const Scheduler = () => {
 };
 
 export default Scheduler;
+
+
+//why is the scheduler still showing the date?
