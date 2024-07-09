@@ -5,11 +5,13 @@ import argparse
 import cv2
 import sys
 import json
+import requests
+import base64
+from collections import defaultdict
+import ast
 
-def generate_frames(video_path, output_folder):
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-    
+
+def generate_and_process_frames(video_path):
     cap = cv2.VideoCapture(video_path)
 
     if not cap.isOpened():
@@ -22,7 +24,6 @@ def generate_frames(video_path, output_folder):
     fps = int(cap.get(cv2.CAP_PROP_FPS))
     print(f"Frames per second: {fps}")
 
-    frame_count = 0
     second_count = 0
     while True:
         ret, frame = cap.read()
@@ -31,28 +32,35 @@ def generate_frames(video_path, output_folder):
         if not ret:
             break
 
-        # Save one frame per second
+        # Process one frame per second
         if frame_count % fps == 0:
-            frame_filename = os.path.join(output_folder, f'frame_{second_count:04d}.jpg')
-            cv2.imwrite(frame_filename, frame)
+            # Define the Detic Image demo command with the required parameters
+            detic_image_demo_command = (
+                f"python demo.py --config-file configs/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.yaml "
+                f"--input ../{second_count}.jpg --output ../{second_count}_demo.jpg --vocabulary lvis "
+                f"--opts MODEL.WEIGHTS ../models/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
+            )
+            
+            # Save the frame to a temporary file
+            temp_frame_path = f"{second_count}.jpg"
+            output_frame_path = f"{second_count}_demo.jpg"
+            cv2.imwrite(temp_frame_path, frame)
+            
+            # Run the Detic Image demo command
+            subprocess.run(detic_image_demo_command, shell=True, cwd='Detic')
+            
+            # Optionally, remove the temporary file after processing
+            os.remove(temp_frame_path)
+            os.remove(output_frame_path)
+            
             second_count += 1
 
         frame_count += 1
 
     # Release the video capture object
     cap.release()
-    print(f"Saved {second_count} frames to {output_folder}")
+    print(f"Processed {second_count} frames.")
 
-def process_frames(folder_path):
-    for filename in os.listdir(folder_path):
-
-        if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
-            detic_Image_demo_command = (
-                f"python demo.py --config-file configs/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.yaml "
-                f"--input ../outputs/frames/{filename} --output ../outputs/{filename}_demo.jpg --vocabulary lvis "
-                f"--opts MODEL.WEIGHTS ../models/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
-            )
-            subprocess.run(detic_Image_demo_command, shell=True, cwd='Detic')
 
 def generate_transcript(audio_file):
 
@@ -72,66 +80,99 @@ def extract_nouns(transcript_file):
     return nouns
 
 
-def timestamped_nouns(nouns, filename):
-    with open(filename, 'r') as file:
-        data = json.load(file)
+def process_detic_labels(file_path):
+
+    file_content = []
+    with open(file_path, 'r') as file:
+        for line in file:
+            # Extract the list part of the line and convert it to a Python list
+            objects_list = ast.literal_eval(line.strip())
+            file_content.append(objects_list)
+
+    object_times = defaultdict(list)
+
+# Populate the object_times dictionary
+    for second, objects in enumerate(file_content):
+        for obj in objects:
+            object_times[obj].append(second)
+
+    # Combine consecutive times into one interval
+    def combine_intervals(times):
+        intervals = []
+        start = times[0]
+        for i in range(1, len(times)):
+            if times[i] != times[i-1] + 1:
+                intervals.append((start, times[i-1]))
+                start = times[i]
+        intervals.append((start, times[-1]))
+        return intervals
+
+    # Create the final JSON structure
+    final_data = []
+    for obj, times in object_times.items():
+        intervals = combine_intervals(times)
+        json_intervals = [{"start": start, "end": end} for start, end in intervals]
+        final_data.append({"object": obj, "times": json_intervals})
+
+    # Print the final JSON data
+    json_output = json.dumps(final_data, indent=2)
+    return json_output
+
+# def run_detic(video_file, words):
+
+#     custom_vocabulary = ','.join(words)
+
+#     detic_demo_command = (
+#         f"python demo.py --config-file configs/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.yaml "
+#         f"--video-input ../media/{video_file} --output ../outputs/output_video.mp4 --vocabulary custom "
+#         f"--custom_vocabulary {custom_vocabulary} --confidence-threshold 0.3 "
+#         f"--opts MODEL.WEIGHTS ../models/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
+#     )
+
+#     subprocess.run(detic_demo_command, shell=True, cwd='Detic')
+
+def fetch_files_from_api(api_url,output_path):
+    response = requests.get(api_url)
+    if response.status_code == 200:
+        with open(output_path, 'wb') as f:
+            f.write(response.content)
+        return output_path
+    else:
+        return None
+
+def main(custom_nouns=None):
+    print("Running script")
+    video_path = fetch_files_from_api("http://127.0.0.1:5000/video/recent", 'media/recent_video.mp4')
+    print("wrote video")
+    audio_path = fetch_files_from_api("http://127.0.0.1:5000/audio/recent", 'media/recent_audio.wav')
+    print("wrote audio")
+
+    if video_path and audio_path:
+        generate_transcript(audio_file=audio_path)
+        print("Transcript generated")
+
+        audio_filename = os.path.basename(audio_path)
+        transcript_file = os.path.splitext(audio_filename)[0] + '.txt'
+
+        nouns = extract_nouns(transcript_file=transcript_file)
+        
+        print("The nouns are:",nouns)
+
+        path = "outputs/frames"
+        print("Video path is:",video_path)
+        generate_and_process_frames(video_path)
+        json_data = process_detic_labels("Detic/labels.txt")
+
+        response = requests.put('http://localhost:5000/upload-json', json=json_data)
+
+        if response.status_code == 200 or response.status_code == 204:
+            print('Updated successfully')
+        else:
+            print('Failed to update, status code:', response.status_code)
+    else:
+        print("Failed to fetch video and audio data from the API")
     
-    noun_details = []
-    for segment in data['segments']:
-        for word in segment['words']:
-            if word['word'] in nouns:
-                noun_details.append({
-                    'word': word['word'],
-                    'start': word['start'],
-                    'end': word['end'],
-                    'score': word['score']
-                })
-    return noun_details
 
-def run_detic(video_file, words):
-
-    custom_vocabulary = ','.join(words)
-
-    detic_demo_command = (
-        f"python demo.py --config-file configs/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.yaml "
-        f"--video-input ../media/{video_file} --output ../outputs/output_video.mp4 --vocabulary custom "
-        f"--custom_vocabulary {custom_vocabulary} --confidence-threshold 0.3 "
-        f"--opts MODEL.WEIGHTS ../models/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
-    )
-
-    subprocess.run(detic_demo_command, shell=True, cwd='Detic')
-
-# def main(audio_file, video_file, custom_nouns=None):
-
-#     generate_transcript(audio_file=audio_file)
-
-#     audio_filename = os.path.basename(audio_file)
-#     transcript_file = os.path.splitext(audio_filename)[0] + '.txt'
-
-#     if custom_nouns:
-#         nouns = custom_nouns.split(',')
-#     else:
-#         nouns = extract_nouns(transcript_file=transcript_file)
-
-#     print("Extracted Nouns", nouns)
-
-#     # nouns1 = ["pencil","person","watch"]
-#     run_detic(video_file=video_file, words=nouns)
-
-def main(video_path, output_folder):
-    generate_frames(video_path=video_path, output_folder=output_folder)
-    path = "outputs/frames"
-    process_frames(path)
 
 if __name__ == "__main__":
-    
-    parser = argparse.ArgumentParser(description="Process an audio file and extract nouns from the transcript.")
-    #parser.add_argument("--audio_file", required=True, help="The path to the audio file.")
-    parser.add_argument("--video_file", required=True, help="The path to the video file.")
-    #parser.add_argument("--custom_nouns", help="Optional custom nouns as comma-separated values to use instead of extracted ones.")
-    parser.add_argument('--output_folder', type=str, help='Path to the folder where frames will be saved.')
-    
-    args = parser.parse_args()
-    
-    #main(args.audio_file, args.video_file, args.custom_nouns)
-    main(args.video_file, args.output_folder)
+    main()

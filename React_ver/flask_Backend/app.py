@@ -66,22 +66,37 @@ def upload_video():
     except Exception as e:
         return jsonify({'error': 'Failed to upload video and audio', 'message': str(e)}), 500
 
+##================================================================================================================================================================================
 
 @app.route('/video/recent', methods=['GET'])
 def get_most_recent_video():
     try:
         logging.debug("Attempting to retrieve the most recent video and audio")
         video_record = StorageModel.query.order_by(StorageModel.created_at.desc()).first_or_404()
-        
-        video_data = video_record.video_data
-        audio_data = video_record.audio_data
-        
-        logging.debug(f"Most recent video and audio found: {video_record.video_name}")
 
-        return jsonify({
-            'video': base64.b64encode(video_data).decode('utf-8'),
-            'audio': base64.b64encode(audio_data).decode('utf-8')
-        })
+        video_file = send_file(io.BytesIO(video_record.video_data), download_name=video_record.video_name, as_attachment=True)
+        
+        logging.debug(f"Most recent video found: {video_record.video_name}")
+
+        return video_file 
+        
+    except Exception as e:
+        logging.error(f"Error retrieving the most recent video and audio: {e}")
+        return jsonify({'error': 'Failed to retrieve the most recent video and audio', 'message': str(e)}), 500
+    
+##================================================================================================================================================================================
+    
+@app.route('/audio/recent', methods=['GET'])
+def get_most_recent_audio():
+    try:
+        logging.debug("Attempting to retrieve the most recent video and audio")
+        video_record = StorageModel.query.order_by(StorageModel.created_at.desc()).first_or_404()
+
+        audio_file = send_file(io.BytesIO(video_record.audio_data), download_name=video_record.audio_name, as_attachment=True)
+        
+        logging.debug(f"Most recent audio found: {video_record.video_name}")
+
+        return audio_file
         
     except Exception as e:
         logging.error(f"Error retrieving the most recent video and audio: {e}")
@@ -89,24 +104,48 @@ def get_most_recent_video():
 
 ##================================================================================================================================================================================
 
-@app.route('/update-json/<int:video_id>', methods=['PUT'])
-def update_json(video_id):
+@app.route('/upload-json', methods=['PUT'])
+def upload_json():
     try:
         # Get the JSON data from the request body
         json_data = request.json
         if not json_data:
             return jsonify({'error': 'No JSON data provided'}), 400
 
-        # Find the video by ID
-        video = StorageModel.query.get_or_404(video_id)
+        # Find the latest video record
+        video_record = StorageModel.query.order_by(StorageModel.created_at.desc()).first()
+        if not video_record:
+            return jsonify({'error': 'No video records found'}), 404
 
         # Update the json_data field
-        video.json_data = json_data
+        video_record.json_data = json_data
         db.session.commit()
 
         return jsonify({'message': 'JSON data updated successfully'}), 200
     except Exception as e:
         return jsonify({'error': 'Failed to update JSON data', 'message': str(e)}), 500
+    
+##================================================================================================================================================================================
+
+@app.route('/retrieve-json', methods=['GET'])
+def retrieve_json():
+    try:
+        
+        video_record = StorageModel.query.order_by(StorageModel.created_at.desc()).first_or_404()
+
+        if not video_record:
+            return jsonify({'error': 'No video records found'}), 404
+
+        # Update the json_data field
+        json_data = video_record.json_data
+
+        return json_data
+    
+    except Exception as e:
+        return jsonify({'error': 'Failed to retrieve JSON data', 'message': str(e)}), 500
+
+    
+##================================================================================================================================================================================
 
 @app.route('/run-script', methods=['POST'])
 def run_script():
