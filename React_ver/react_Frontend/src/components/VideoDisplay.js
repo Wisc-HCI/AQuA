@@ -1,40 +1,15 @@
 import React, { useState } from 'react';
-// import axios from 'axios';
 import './css/VideoDisplay.css';
 
 function VideoDisplay({ setAvScript, setTimeline, setObjects }) {
-    // const [videoFile, setVideoFile] = useState(null);
-    // const [videoUrl, setVideoUrl] = useState('');
-    // const [isAnalyzed, setIsAnalyzed] = useState(false);
+    const [videoUrl, setVideoUrl] = useState('');
+    const [audioUrl, setAudioUrl] = useState('');
 
-    // const handleFileChange = (e) => {
-    //     setVideoFile(e.target.files[0]);
-    //     setVideoUrl(URL.createObjectURL(e.target.files[0]));
-    //     setIsAnalyzed(false); // Reset analyzed state when a new file is selected
-    // };
-
-    // // const handleUpload = () => {
-    // //     const formData = new FormData();
-    // //     formData.append('video', videoFile);
-
-    // //     axios.post('http://localhost:5000/analyze-video', formData)
-    // //         .then(response => {
-    // //             setAvScript(response.data.av_script);
-    // //             setTimeline(response.data.timeline);
-    // //             setObjects(response.data.objects);
-    // //             setIsAnalyzed(true); // Set analyzed state to true after successful analysis
-    // //         })
-    // //         .catch(error => {
-    // //             console.error('There was an error uploading the video!', error);
-    // //         });
-    // // };
-
-    const runScript = async () => {  
+    const runScript = async () => {
         try {
             const response = await fetch('http://127.0.0.1:5000/run-script', {
                 method: 'POST',
-                mode:'no-cors',
-                crossDomain: true,
+                mode: 'cors',
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -45,28 +20,66 @@ function VideoDisplay({ setAvScript, setTimeline, setObjects }) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            // console.log("wassup")
+            console.log("Script ran successfully");
 
-            const data = response;
-            console.log(data);
-            if (data) {
-                alert(`Error: ${data.error}`);
-            } else {
-                alert(`Output: ${data.output}`);
-            }
+            await fetchMostRecentVideo();
+            await fetchMostRecentAudio();
+
         } catch (error) {
             console.error('Error:', error);
+        }
+    };
+
+    const fetchMostRecentVideo = async () => {
+        try {
+            const response = await fetch('http://127.0.0.1:5000/video/recent', {
+                method: 'GET',
+                mode: 'cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const blob = await response.blob();
+            const videoUrl = URL.createObjectURL(blob);
+            setVideoUrl(videoUrl);
+        } catch (error) {
+            console.error('Error fetching the most recent video:', error);
+        }
+    };
+
+    const fetchMostRecentAudio = async () => {
+        try {
+            const response = await fetch('http://127.0.0.1:5000/audio/recent', {
+                method: 'GET',
+                mode: 'cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const blob = await response.blob();
+            const audioUrl = URL.createObjectURL(blob);
+            setAudioUrl(audioUrl);
+        } catch (error) {
+            console.error('Error fetching the most recent audio:', error);
         }
     };
 
     return (
         <div className="video-container">
             <h2 className="video-header">Video Display</h2>
-            {/* <input type="file" onChange={handleFileChange} /> */}
-            {/* <button onClick={handleUpload}>Upload and Analyze</button> */}
             <button onClick={runScript}>Upload and Analyze</button>
-            {/* {videoUrl && <video src={videoUrl} controls width="600" />}
-            {isAnalyzed && <p>Video analysis completed and results are updated.</p>} */}
+            {videoUrl && <video src={videoUrl} controls width="600" />}
+            {audioUrl && <audio src={audioUrl} controls />}
         </div>
     );
 }
