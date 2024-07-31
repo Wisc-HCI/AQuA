@@ -25,7 +25,7 @@ function Prompting() {
     const handleAskQuestion = () => {
         if (question.trim() === '') return;
 
-        const userMessage = { text: question, sender: 'user' };
+        const userMessage = { text: question, sender: 'person' };
         setMessages([...messages, userMessage]);
 
         // Simulate searching for the best response from the dataset
@@ -48,7 +48,7 @@ function Prompting() {
         const response = combinedData.find(entry => entry.Message && entry.Message.toLowerCase().includes(question.toLowerCase()));
 
         if (response) {
-            return { text: response.Message, sender: 'bot' };
+            return { text: response.Message, sender: 'llm' };
         } else {
             return { text: "I'm sorry, I don't have an answer for that.", sender: 'bot' };
         }
