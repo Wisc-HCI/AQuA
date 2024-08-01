@@ -48,9 +48,9 @@ function App() {
         <div className="video">
           <VideoDisplay fetchTimelineData={fetchTimelineData} />
         </div>
-        <div className="av-script">
+        {/* <div className="av-script">
           <AVScript />
-        </div>
+        </div> */}
         <div className="prompting">
           <Prompting />
         </div>

@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect, useRef } from 'react';
 import { loadCSV } from './utils/csvLoader'; // Adjust the path as necessary
 import './css/Prompting.css';
 
@@ -8,15 +7,23 @@ function Prompting() {
     const [question, setQuestion] = useState('');
     const [dataWithSuggestions, setDataWithSuggestions] = useState([]);
     const [dataNoSuggestions, setDataNoSuggestions] = useState([]);
+    const chatBoxRef = useRef(null);
 
     useEffect(() => {
         // Load the CSV data when the component mounts
-        loadCSV('/with_suggestions.csv').then(data => setDataWithSuggestions(data));
-        loadCSV('/no_suggestions.csv').then(data => setDataNoSuggestions(data));
+        loadCSV('/mnt/data/with suggestions.csv').then(data => setDataWithSuggestions(data));
+        loadCSV('/mnt/data/no suggestions.csv').then(data => setDataNoSuggestions(data));
 
         // Automatically start the conversation with the LLM greeting
         setMessages([{ sender: 'bot', text: 'How can I help you?' }]);
     }, []);
+
+    useEffect(() => {
+        // Scroll to the bottom of the chat box whenever messages change
+        if (chatBoxRef.current) {
+            chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+        }
+    }, [messages]);
 
     const handleQuestionChange = (e) => {
         setQuestion(e.target.value);
@@ -45,10 +52,10 @@ function Prompting() {
     const findBestResponse = (question) => {
         // Simple search for a related response in the datasets
         const combinedData = [...dataWithSuggestions, ...dataNoSuggestions];
-        const response = combinedData.find(entry => entry.Message && entry.Message.toLowerCase().includes(question.toLowerCase()));
+        let response = combinedData.find(entry => entry.Person && entry.Person.toLowerCase().includes(question.toLowerCase()));
 
         if (response) {
-            return { text: response.Message, sender: 'llm' };
+            return { text: response.LLM, sender: 'llm' }; // Adjusting the response field as per the CSV structure
         } else {
             return { text: "I'm sorry, I don't have an answer for that.", sender: 'bot' };
         }
@@ -57,7 +64,7 @@ function Prompting() {
     return (
         <div className="prompting-container">
             <h2>Chat with Language Model</h2>
-            <div className="chat-box">
+            <div className="chat-box" ref={chatBoxRef}>
                 {messages.map((message, index) => (
                     <div key={index} className={`message ${message.sender}`}>
                         {message.text}
