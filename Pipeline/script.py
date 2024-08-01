@@ -112,11 +112,33 @@ def process_detic_labels(file_path):
     for obj, times in object_times.items():
         intervals = combine_intervals(times)
         json_intervals = [{"start": start, "end": end} for start, end in intervals]
-        final_data.append({"object": obj, "times": json_intervals})
+        final_data.append({"object": obj, "times": json_intervals, "source": "video"})
 
     # Print the final JSON data
     json_output = json.dumps(final_data, indent=2)
     return json_output
+
+def process_transcript_labels(nouns):
+    with open('recent_audio.json','r') as f:
+        data = json.load(f)
+    
+    words = []
+    for segment in data['segments']:
+        for word_info in segment['words']:
+            word = word_info['word']
+            start = word_info['start']
+            end = word_info['end']
+            words.append({"word": word, "start": start, "end": end})
+    
+    noun_times = []
+    for noun in nouns:
+        noun_data = {"object": noun, "times": [], "source": "audio"}
+        for word_info in words:
+            if word_info['word'].strip('.,') == noun:
+                noun_data["times"].append({"start": word_info['start'], "end": word_info['end']})
+        noun_times.append(noun_data)
+    
+    return noun_times
 
 # def run_detic(video_file, words):
 
@@ -163,7 +185,11 @@ def main(custom_nouns=None):
         generate_and_process_frames(video_path)
         json_data = process_detic_labels("Detic/labels.txt")
 
-        response = requests.put('http://localhost:5000/upload-json', json=json_data)
+        transcript_json_data = process_transcript_labels(nouns)
+
+        final_json = json_data + transcript_json_data
+
+        response = requests.put('http://localhost:5000/upload-json', json=final_json)
 
         if response.status_code == 200 or response.status_code == 204:
             print('Updated successfully')
