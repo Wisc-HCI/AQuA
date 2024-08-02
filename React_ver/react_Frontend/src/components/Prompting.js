@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { loadCSV } from './utils/csvLoader'; // Adjust the path as necessary
 import './css/Prompting.css';
+import axios from 'axios';
 
 function Prompting() {
     const [messages, setMessages] = useState([]);
@@ -29,15 +30,21 @@ function Prompting() {
         setQuestion(e.target.value);
     };
 
-    const handleAskQuestion = () => {
+    const handleAskQuestion = async () => {
         if (question.trim() === '') return;
 
         const userMessage = { text: question, sender: 'person' };
         setMessages([...messages, userMessage]);
 
-        // Simulate searching for the best response from the dataset
-        const response = findBestResponse(question);
-        setMessages(prevMessages => [...prevMessages, response]);
+        try {
+            const response = await axios.post('http://localhost:5000/chat', { prompt: question });
+            const llmMessage = { text: response.data.choices[0].message.content, sender: 'llm' };
+            setMessages(prevMessages => [...prevMessages, llmMessage]);
+        } catch (error) {
+            console.error('Error fetching response:', error);
+            const errorMessage = error.response ? `${error.message}: ${error.response.data.error}` : error.message;
+            setMessages(prevMessages => [...prevMessages, { text: `Error fetching response: ${errorMessage}`, sender: 'bot' }]);
+        }
 
         setQuestion('');
     };
@@ -46,18 +53,6 @@ function Prompting() {
         if (e.key === 'Enter') {
             e.preventDefault();
             handleAskQuestion();
-        }
-    };
-
-    const findBestResponse = (question) => {
-        // Simple search for a related response in the datasets
-        const combinedData = [...dataWithSuggestions, ...dataNoSuggestions];
-        let response = combinedData.find(entry => entry.Person && entry.Person.toLowerCase().includes(question.toLowerCase()));
-
-        if (response) {
-            return { text: response.LLM, sender: 'llm' }; // Adjusting the response field as per the CSV structure
-        } else {
-            return { text: "I'm sorry, I don't have an answer for that.", sender: 'bot' };
         }
     };
 

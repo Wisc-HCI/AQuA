@@ -10,6 +10,7 @@ import io
 import logging
 from datetime import datetime
 import base64
+import requests
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -17,7 +18,6 @@ CORS(app)
 db = SQLAlchemy(app=app)
 
 logging.basicConfig(level=logging.DEBUG)
-
 
 class StorageModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -66,8 +66,6 @@ def upload_video():
     except Exception as e:
         return jsonify({'error': 'Failed to upload video and audio', 'message': str(e)}), 500
 
-##================================================================================================================================================================================
-
 @app.route('/video/recent', methods=['GET'])
 def get_most_recent_video():
     try:
@@ -83,9 +81,7 @@ def get_most_recent_video():
     except Exception as e:
         logging.error(f"Error retrieving the most recent video and audio: {e}")
         return jsonify({'error': 'Failed to retrieve the most recent video and audio', 'message': str(e)}), 500
-    
-##================================================================================================================================================================================
-    
+
 @app.route('/audio/recent', methods=['GET'])
 def get_most_recent_audio():
     try:
@@ -101,8 +97,6 @@ def get_most_recent_audio():
     except Exception as e:
         logging.error(f"Error retrieving the most recent video and audio: {e}")
         return jsonify({'error': 'Failed to retrieve the most recent video and audio', 'message': str(e)}), 500
-
-##================================================================================================================================================================================
 
 @app.route('/upload-json', methods=['PUT'])
 def upload_json():
@@ -125,8 +119,6 @@ def upload_json():
     except Exception as e:
         return jsonify({'error': 'Failed to update JSON data', 'message': str(e)}), 500
     
-##================================================================================================================================================================================
-
 @app.route('/retrieve-json', methods=['GET'])
 def retrieve_json():
     try:
@@ -144,14 +136,6 @@ def retrieve_json():
     except Exception as e:
         return jsonify({'error': 'Failed to retrieve JSON data', 'message': str(e)}), 500
 
-    
-##================================================================================================================================================================================
-
-
-
-    
-##================================================================================================================================================================================
-
 @app.route('/run-script', methods=['POST'])
 def run_script():
     print("Running script")
@@ -167,6 +151,27 @@ def run_script():
         return "True"
     except Exception as e:
         return "False"
+
+# Add ChatGPT route
+@app.route('/chat', methods=['POST'])
+def chat():
+    prompt = request.json.get('prompt')
+    try:
+        response = requests.post(
+            'https://api.openai.com/v1/chat/completions',
+            headers={'Authorization': f'Bearer {API_KEY}'},
+            json={
+                'model': 'gpt-3.5-turbo',  # Adjust the model as needed
+                'messages': [{'role': 'user', 'content': prompt}],
+                'max_tokens': 150
+            }
+        )
+        response.raise_for_status()
+        return jsonify(response.json())
+    except requests.RequestException as e:
+        print(f"Error: {e}")
+        print(f"Response content: {e.response.content if e.response else 'No response content'}")
+        return jsonify({'error': str(e)}), 500
 
 #------------------------------------------------------------------------------------------------------------------------------------------------#
 
