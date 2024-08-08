@@ -152,16 +152,18 @@ def run_script():
     except Exception as e:
         return "False"
 
-# Add ChatGPT route
 @app.route('/chat', methods=['POST'])
 def chat():
     prompt = request.json.get('prompt')
     try:
         response = requests.post(
-            'https://api.openai.com/v1/chat/completions',
-            headers={'Authorization': f'Bearer {API_KEY}'},
+            'https://test-llm-openai.openai.azure.com/openai/deployments/Testbed/chat/completions',
+            headers={
+                'Authorization': f'Bearer a2cc2b6310e4424ca9230faf143a048f',
+                'api-key': 'a2cc2b6310e4424ca9230faf143a048f'
+            },
             json={
-                'model': 'gpt-3.5-turbo',  # Adjust the model as needed
+                'model': 'gpt-3.5',
                 'messages': [{'role': 'user', 'content': prompt}],
                 'max_tokens': 150
             }
@@ -172,6 +174,7 @@ def chat():
         print(f"Error: {e}")
         print(f"Response content: {e.response.content if e.response else 'No response content'}")
         return jsonify({'error': str(e)}), 500
+
 
 #------------------------------------------------------------------------------------------------------------------------------------------------#
 
