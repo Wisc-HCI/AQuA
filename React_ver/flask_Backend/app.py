@@ -157,7 +157,7 @@ def chat():
     prompt = request.json.get('prompt')
     try:
         response = requests.post(
-            'https://test-llm-openai.openai.azure.com/openai/deployments/Testbed/chat/completions?api-version=2024-02-01',
+            'https://test-llm-openai.openai.azure.com/openai/deployments/Testbed/chat/completions?api-version=2024-02-01', #the completions?api-version=2024-02-01 required for this api to work
             headers={
                 'Authorization': 'Bearer a2cc2b6310e4424ca9230faf143a048f',
                 'api-key': 'a2cc2b6310e4424ca9230faf143a048f'
