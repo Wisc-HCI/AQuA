@@ -37,7 +37,11 @@ function Prompting() {
         setMessages([...messages, userMessage]);
 
         try {
-            const response = await axios.post('http://localhost:5000/chat', { prompt: question });
+            const response = await axios.post('http://127.0.0.1:5000/chat', { prompt: question });
+            
+            // Log the full response object to check for additional information
+            console.log('Full response:', response);
+            
             const llmMessage = { text: response.data.choices[0].message.content, sender: 'llm' };
             setMessages(prevMessages => [...prevMessages, llmMessage]);
         } catch (error) {
