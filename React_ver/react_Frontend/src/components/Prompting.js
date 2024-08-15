@@ -8,6 +8,7 @@ function Prompting() {
     const [question, setQuestion] = useState('');
     const [dataWithSuggestions, setDataWithSuggestions] = useState([]);
     const [dataNoSuggestions, setDataNoSuggestions] = useState([]);
+    const [suggestions, setSuggestions] = useState([]); // New state for suggestions
     const chatBoxRef = useRef(null);
 
     useEffect(() => {
@@ -44,6 +45,9 @@ function Prompting() {
             
             const llmMessage = { text: response.data.choices[0].message.content, sender: 'llm' };
             setMessages(prevMessages => [...prevMessages, llmMessage]);
+
+            // Generate relevant suggestions based on the current conversation
+            generateSuggestions(question);
         } catch (error) {
             console.error('Error fetching response:', error);
             const errorMessage = error.response ? `${error.message}: ${error.response.data.error}` : error.message;
@@ -58,6 +62,26 @@ function Prompting() {
             e.preventDefault();
             handleAskQuestion();
         }
+    };
+
+    // Function to generate suggestions based on the last question
+    const generateSuggestions = (lastQuestion) => {
+        // For now, we are simply using mock data. 
+        // You can improve this logic to dynamically generate based on `dataWithSuggestions` or an API response.
+        const mockSuggestions = [
+            'Can you clarify?',
+            'Tell me more about that.',
+            'What’s the next step?',
+            'Do you have more examples?'
+        ];
+
+        // Set new suggestions
+        setSuggestions(mockSuggestions);
+    };
+
+    // Function to handle when a suggestion is clicked
+    const handleSuggestionClick = (suggestion) => {
+        setQuestion(suggestion); // Auto-fill the input box with the suggestion
     };
 
     return (
@@ -79,6 +103,19 @@ function Prompting() {
                     placeholder="Ask a question..."
                 />
                 <button onClick={handleAskQuestion}>Ask</button>
+            </div>
+
+            {/* Suggestion Bubbles */}
+            <div className="suggestions-container">
+                {suggestions.map((suggestion, index) => (
+                    <div 
+                        key={index} 
+                        className="suggestion-bubble" 
+                        onClick={() => handleSuggestionClick(suggestion)}
+                    >
+                        {suggestion}
+                    </div>
+                ))}
             </div>
         </div>
     );

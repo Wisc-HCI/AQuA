@@ -163,7 +163,7 @@ def chat():
                 'api-key': 'a2cc2b6310e4424ca9230faf143a048f'
             },
             json={
-                'model': 'gpt-3.5',
+                'model': 'gpt-4',
                 'messages': [{'role': 'user', 'content': prompt}],
                 'max_tokens': 150
             }
