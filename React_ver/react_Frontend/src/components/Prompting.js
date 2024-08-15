@@ -34,8 +34,8 @@ function Prompting() {
             const llmMessage = { text: response.data.answer, sender: 'llm' };
             setMessages(prevMessages => [...prevMessages, llmMessage]);
 
-            // Set new suggestions from the LLM response
-            setSuggestions(response.data.suggestions || []);
+            // Set new suggestions from the LLM response, limiting the number to 4
+            setSuggestions(response.data.suggestions.slice(0, 4) || []);
         } catch (error) {
             console.error('Error fetching response:', error);
             setMessages(prevMessages => [...prevMessages, { text: `Error fetching response: ${error.message}`, sender: 'bot' }]);
