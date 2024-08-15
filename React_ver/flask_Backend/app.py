@@ -136,26 +136,11 @@ def retrieve_json():
     except Exception as e:
         return jsonify({'error': 'Failed to retrieve JSON data', 'message': str(e)}), 500
 
-@app.route('/run-script', methods=['POST'])
-def run_script():
-    print("Running script")
-    try:
-        print("Running script2")
-        # Construct the path to the script.py file
-        script_path = os.path.join(os.path.dirname(__file__), '../../Pipeline/script.py')
-        # Ensure the path is absolute
-        script_path = os.path.abspath(script_path)
-        command = f'python {script_path}'
-        # Run the script
-        subprocess.run(command, shell=True)
-        return "True"
-    except Exception as e:
-        return "False"
-
 @app.route('/chat', methods=['POST'])
 def chat():
     prompt = request.json.get('prompt')
     try:
+        # Ask the LLM for a response and follow-up questions in one request
         response = requests.post(
             'https://test-llm-openai.openai.azure.com/openai/deployments/Testbed/chat/completions?api-version=2024-02-01',
             headers={
@@ -165,7 +150,7 @@ def chat():
             json={
                 'model': 'gpt-4',
                 'messages': [{'role': 'user', 'content': prompt}],
-                'max_tokens': 150,
+                'max_tokens': 300,
                 'n': 1,
                 'stop': None,
                 'temperature': 0.7
@@ -174,16 +159,42 @@ def chat():
         response.raise_for_status()
         llm_response = response.json()
 
-        # Example of adding suggestions
-        follow_up_suggestions = ["What does that mean?", "Can you clarify that?", "Can you explain more about this topic?"]
+        # Extract the answer from the response
+        answer = llm_response['choices'][0]['message']['content']
+
+        # Now, ask the LLM for follow-up questions based on the original prompt
+        follow_up_response = requests.post(
+            'https://test-llm-openai.openai.azure.com/openai/deployments/Testbed/chat/completions?api-version=2024-02-01',
+            headers={
+                'Authorization': 'Bearer a2cc2b6310e4424ca9230faf143a048f',
+                'api-key': 'a2cc2b6310e4424ca9230faf143a048f'
+            },
+            json={
+                'model': 'gpt-4',
+                'messages': [
+                    {'role': 'system', 'content': 'Generate follow-up questions related to the topic of this prompt.'},
+                    {'role': 'user', 'content': prompt}
+                ],
+                'max_tokens': 100,
+                'n': 1,
+                'temperature': 0.7
+            }
+        )
+        follow_up_response.raise_for_status()
+        follow_up_questions = follow_up_response.json()['choices'][0]['message']['content']
+
+        # Parse follow-up questions into a list
+        # Here we're assuming that follow-up questions are returned in a bullet or numbered list format
+        suggestions = [q.strip() for q in follow_up_questions.split('\n') if q]
 
         return jsonify({
-            'answer': llm_response['choices'][0]['message']['content'],
-            'suggestions': follow_up_suggestions  # You can also generate suggestions dynamically using the LLM
+            'answer': answer,
+            'suggestions': suggestions  # The dynamically generated follow-up questions
         })
     except requests.RequestException as e:
         print(f"Error: {e}")
         return jsonify({'error': str(e)}), 500
+
 
 #------------------------------------------------------------------------------------------------------------------------------------------------#
 

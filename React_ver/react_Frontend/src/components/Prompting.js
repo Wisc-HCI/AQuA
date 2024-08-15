@@ -57,7 +57,6 @@ function Prompting() {
 
     return (
         <div className="prompting-container">
-            <h2>Chat with Language Model</h2>
             <div className="chat-box" ref={chatBoxRef}>
                 {messages.map((message, index) => (
                     <div key={index} className={`message ${message.sender}`}>
