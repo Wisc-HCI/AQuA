@@ -157,7 +157,7 @@ def chat():
     prompt = request.json.get('prompt')
     try:
         response = requests.post(
-            'https://test-llm-openai.openai.azure.com/openai/deployments/Testbed/chat/completions?api-version=2024-02-01', #the completions?api-version=2024-02-01 required for this api to work
+            'https://test-llm-openai.openai.azure.com/openai/deployments/Testbed/chat/completions?api-version=2024-02-01',
             headers={
                 'Authorization': 'Bearer a2cc2b6310e4424ca9230faf143a048f',
                 'api-key': 'a2cc2b6310e4424ca9230faf143a048f'
@@ -165,14 +165,24 @@ def chat():
             json={
                 'model': 'gpt-4',
                 'messages': [{'role': 'user', 'content': prompt}],
-                'max_tokens': 150
+                'max_tokens': 150,
+                'n': 1,
+                'stop': None,
+                'temperature': 0.7
             }
         )
         response.raise_for_status()
-        return jsonify(response.json())
+        llm_response = response.json()
+
+        # Example of adding suggestions
+        follow_up_suggestions = ["What does that mean?", "Can you clarify that?", "Can you explain more about this topic?"]
+
+        return jsonify({
+            'answer': llm_response['choices'][0]['message']['content'],
+            'suggestions': follow_up_suggestions  # You can also generate suggestions dynamically using the LLM
+        })
     except requests.RequestException as e:
         print(f"Error: {e}")
-        print(f"Response content: {e.response.content if e.response else 'No response content'}")
         return jsonify({'error': str(e)}), 500
 
 #------------------------------------------------------------------------------------------------------------------------------------------------#
