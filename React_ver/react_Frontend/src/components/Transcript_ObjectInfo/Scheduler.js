@@ -4,7 +4,7 @@ import moment from 'moment';
 import Modal from 'react-modal';
 import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
 import 'react-calendar-timeline/lib/Timeline.css';
-import './Scheduler.css';
+import '../css/Scheduler.css';
 
 Modal.setAppElement('#root'); // Adjust if your root element ID is different
 
