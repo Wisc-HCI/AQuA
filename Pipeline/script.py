@@ -91,7 +91,7 @@ def process_detic_labels(file_path):
 
     object_times = defaultdict(list)
 
-# Populate the object_times dictionary
+    # Populate the object_times dictionary
     for second, objects in enumerate(file_content):
         for obj in objects:
             object_times[obj].append(second)
@@ -111,7 +111,11 @@ def process_detic_labels(file_path):
     final_data = []
     for obj, times in object_times.items():
         intervals = combine_intervals(times)
-        json_intervals = [{"start": start, "end": end} for start, end in intervals]
+        json_intervals = []
+        for start, end in intervals:
+            if start == end:
+                start -= 1  # Subtract 1 from the start if start and end are the same
+            json_intervals.append({"start": start, "end": end})
         final_data.append({"object": obj, "times": json_intervals, "source": "video"})
 
     # Print the final JSON data
@@ -123,19 +127,19 @@ def process_transcript_labels(nouns):
         data = json.load(f)
     
     words = []
-    for segment in data['segments']:
-        for word_info in segment['words']:
-            word = word_info['word']
-            start = word_info['start']
-            end = word_info['end']
+    for segment in data["segments"]:
+        for word_info in segment["words"]:
+            word = word_info["word"]
+            start = word_info["start"]
+            end = word_info["end"]
             words.append({"word": word, "start": start, "end": end})
     
     noun_times = []
     for noun in nouns:
         noun_data = {"object": noun, "times": [], "source": "audio"}
         for word_info in words:
-            if word_info['word'].strip('.,') == noun:
-                noun_data["times"].append({"start": word_info['start'], "end": word_info['end']})
+            if word_info["word"].strip('.,') == noun:
+                noun_data["times"].append({"start": word_info["start"], "end": word_info["end"]})
         noun_times.append(noun_data)
     
     return noun_times
@@ -180,24 +184,27 @@ def main(custom_nouns=None):
         
         print("The nouns are:",nouns)
 
-        path = "outputs/frames"
-        print("Video path is:",video_path)
-        generate_and_process_frames(video_path)
+        # path = "outputs/frames"
+        # print("Video path is:",video_path)
+        # generate_and_process_frames(video_path)
         json_data = process_detic_labels("Detic/labels.txt")
 
         transcript_json_data = process_transcript_labels(nouns)
 
-        final_json = json_data + transcript_json_data
+        json_data_list = json.loads(json_data)
 
-        response = requests.put('http://localhost:5000/upload-json', json=final_json)
+        final_json = json_data_list + transcript_json_data
+        print("Final JSON data:", final_json)
+
+        response = requests.put('http://127.0.0.1:5000/upload-json', json=final_json)
 
         if response.status_code == 200 or response.status_code == 204:
             print('Updated successfully')
         else:
+            print(response)
             print('Failed to update, status code:', response.status_code)
     else:
         print("Failed to fetch video and audio data from the API")
-    
 
 
 if __name__ == "__main__":

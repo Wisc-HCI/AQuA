@@ -4,6 +4,44 @@ import './css/VideoDisplay.css';
 function VideoDisplay({ fetchTimelineData }) {
   const [videoUrl, setVideoUrl] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
+  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [selectedAudio, setSelectedAudio] = useState(null);
+
+  const handleVideoChange = (event) => {
+    setSelectedVideo(event.target.files[0]);
+  };
+
+  const handleAudioChange = (event) => {
+    setSelectedAudio(event.target.files[0]);
+  };
+
+  const uploadFiles = async () => {
+    if (!selectedVideo || !selectedAudio) {
+      alert("Please select both video and audio files.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('video', selectedVideo);
+    formData.append('audio', selectedAudio);
+
+    try {
+      const response = await fetch('http://127.0.0.1:5000/upload', {
+        method: 'POST',
+        mode: 'cors',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload error! status: ${response.status}`);
+      }
+
+      console.log("Video and audio uploaded successfully");
+      await runScript(); // Run the script after uploading
+    } catch (error) {
+      console.error('Error uploading video and audio:', error);
+    }
+  };
 
   const runScript = async () => {
     try {
@@ -78,9 +116,20 @@ function VideoDisplay({ fetchTimelineData }) {
   return (
     <div className="video-container">
       <h2 className="video-header">Video Display</h2>
-      <button onClick={runScript}>Upload and Analyze</button>
+      {!videoUrl && (
+        <>
+          <div className="input-container">
+            <label htmlFor="video-upload">Choose Video:</label>
+            <input id="video-upload" type="file" accept="video/*" onChange={handleVideoChange} />
+          </div>
+          <div className="input-container">
+            <label htmlFor="audio-upload">Choose Audio:</label>
+            <input id="audio-upload" type="file" accept="audio/*" onChange={handleAudioChange} />
+          </div>
+          <button onClick={uploadFiles}>Upload and Analyze</button>
+        </>
+      )}
       {videoUrl && <video src={videoUrl} controls width="600" />}
-      {audioUrl && <audio src={audioUrl} controls />}
     </div>
   );
 }

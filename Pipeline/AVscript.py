@@ -1,4 +1,7 @@
 import json
+import sys
+import requests
+import os
 
 def trim_audio(json_transcript):
     extracted_segments = [
@@ -83,48 +86,38 @@ def segment_text_audio(data, words):
     if temp_segment:
         segments.append({'type': 'other', 'text': temp_segment.strip()})
 
-    segment_number = 1
-    for segment in segments:
-        if segment['type'] == 'other':
-            print(f"Segment {segment_number} (text not containing the words '{words}'): {segment['text']}")
-        elif segment['type'] == 'with':
-            print(f"Segment {segment_number} (containing the words '{words}'): {segment['text']}")
-        segment_number += 1
-
     return segments
 
 def segment_data_video(data, objects):
     segments = []
-    last_end = 0
-    current_group = "before_object"
-    segment_counter = 1
     
     for obj_start, obj_end in objects:
-        # before the object
-        before_text = []
+        # Other (before the object)
+        other_text = []
         while data and data[0]['end'] <= obj_start:
-            before_text.append(data.pop(0))
+            other_text.append(data.pop(0))
         
-        if before_text:
+        if other_text:
             segments.append({
-                'text': ' '.join([item['text'] for item in before_text])
+                'type': 'other',
+                'text': ' '.join([item['text'] for item in other_text])
             })
         
-        # with the object
+        # With the object
         with_text = []
         while data and data[0]['start'] < obj_end:
             with_text.append(data.pop(0))
         
         if with_text:
             segments.append({
+                'type': 'with',
                 'text': ' '.join([item['text'] for item in with_text])
             })
-        
-        current_group = "after_object" if current_group == "before_object" else "after_second_object"
     
-    # after the last object
+    # Other (after the last object)
     if data:
         segments.append({
+            'type': 'other',
             'text': ' '.join([item['text'] for item in data])
         })
     
@@ -135,11 +128,36 @@ def segment_data_video(data, objects):
 
 
 
-def main(objects_json):
+
+def main():
+    if len(sys.argv) != 2:
+        print("Usage: python AVscript.py <objects_json>")
+        sys.exit(1)
+    
+    try:
+        objects_json = json.loads(sys.argv[1])
+        objects_json = objects_json['selectedObjects']
+    except json.JSONDecodeError:
+        print("Invalid JSON")
+        sys.exit(1)
+
+    print("Objects JSON:", objects_json)
+
     print("Running AVscript")
     timestamped_transcript = None
-    with open('recent_audio.json','r') as f:
-        timestamped_transcript = json.load(f)
+
+    print(os.getcwd())
+
+    try:
+        with open('../../Pipeline/recent_audio.json', 'r') as f:
+            timestamped_transcript = json.load(f)
+    except FileNotFoundError:
+        print("recent_audio.json file not found. Please ensure the file is in the correct directory.")
+        # handle the case when the file is not found
+
+
+    # with open('recent_audio.json','r') as f:
+    #     timestamped_transcript = json.load(f)
     
     if(timestamped_transcript!=None):
         data = trim_audio(timestamped_transcript)
@@ -147,8 +165,10 @@ def main(objects_json):
             words = []
             for item in objects_json:
                 words.append(item["object"])
+            print("Hello")
             segments = segment_text_audio(data, words)
         elif check_sources(objects_json) == "video" or check_sources(objects_json) == "both":
+            print("Bye")
             if len(objects_json) == 1:
                 times = objects_json[0].get('times', [])
                 tuples = [(time['start'], time['end']) for time in times]
@@ -160,8 +180,22 @@ def main(objects_json):
                     print("No intersections found")
                 else:
                     segments = segment_data_video(data, objects)
+        
+        print("segments:", segments)
+        
+        if segments:  
+            try:
+                response = requests.put('http://localhost:5000/upload-AV', json=segments)
+                if response.status_code == 200:
+                    print("Segments uploaded successfully")
+                else:
+                    print(f"Failed to upload segments: {response.status_code} - {response.text}")
+            except Exception as e:
+                print(f"Failed to make PUT request: {e}")
+
     else:
         print("No audio transcript found")
 
 if __name__ == "__main__":
     main()
+

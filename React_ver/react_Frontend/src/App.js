@@ -55,9 +55,9 @@ function App() {
           <Prompting />
         </div>
       </div>
-      <div className="middle-section">
+      {/* <div className="middle-section">
         <Scheduler groups={groups} items={items} />
-      </div>
+      </div> */}
     </div>
   );
 }

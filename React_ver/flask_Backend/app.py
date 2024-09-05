@@ -10,11 +10,14 @@ import io
 import logging
 from datetime import datetime
 import base64
+import json
+from flask_migrate import Migrate
 
 app = Flask(__name__)
 app.config.from_object(Config)
 CORS(app)
 db = SQLAlchemy(app=app)
+migrate = Migrate(app, db)
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -26,6 +29,7 @@ class StorageModel(db.Model):
     audio_name = db.Column(db.String(100), nullable=True)  # New column for audio name
     audio_data = db.Column(db.LargeBinary, nullable=True)  # New column for audio data
     json_data = db.Column(db.JSON, nullable=True)
+    AV_segmented = db.Column(db.JSON, nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
 with app.app_context():
@@ -109,6 +113,7 @@ def upload_json():
     try:
         # Get the JSON data from the request body
         json_data = request.json
+        print(json_data)
         if not json_data:
             return jsonify({'error': 'No JSON data provided'}), 400
 
@@ -146,9 +151,64 @@ def retrieve_json():
 
     
 ##================================================================================================================================================================================
+#have to get the object values and send it to the script
+@app.route('/run-AV', methods=['POST'])
+def run_AV():
+    print("Running AVscript")
+    try:
+        data = request.get_json()
+        json_string = json.dumps(data)
+        # Construct the path to the script.py file
+        script_path = os.path.join(os.path.dirname(__file__), '../../Pipeline/AVscript.py')
+        # Ensure the path is absolute
+        script_path = os.path.abspath(script_path)
+        command = f'python {script_path} \'{json_string}\''
+        # Run the script
+        subprocess.run(command, shell=True)
+        return "True"
+    except Exception as e:
+        return "False"
 
+##================================================================================================================================================================================
 
+@app.route('/upload-AV', methods=['PUT'])
+def upload_AV():
+    try:
+        # Get the JSON data from the request body
+        AV_data = request.json
+        if not AV_data:
+            return jsonify({'error': 'No JSON data provided'}), 400
 
+        # Find the latest video record
+        video_record = StorageModel.query.order_by(StorageModel.created_at.desc()).first()
+        if not video_record:
+            return jsonify({'error': 'No video records found'}), 404
+
+        # Update the json_data field
+        video_record.AV_segmented  = AV_data
+        db.session.commit()
+
+        return jsonify({'message': 'JSON data updated successfully'}), 200
+    except Exception as e:
+        return jsonify({'error': 'Failed to update JSON data', 'message': str(e)}), 500    
+
+##================================================================================================================================================================================
+
+@app.route('/retrieve-AV', methods=['GET'])
+def retrieve_AV():
+    try: 
+        video_record = StorageModel.query.order_by(StorageModel.created_at.desc()).first_or_404()
+
+        if not video_record:
+            return jsonify({'error': 'No video records found'}), 404
+
+        # Update the json_data field
+        AV_data = video_record.AV_segmented
+
+        return AV_data
+    
+    except Exception as e:
+        return jsonify({'error': 'Failed to retrieve JSON data', 'message': str(e)}), 500
     
 ##================================================================================================================================================================================
 
@@ -156,14 +216,13 @@ def retrieve_json():
 def run_script():
     print("Running script")
     try:
-        print("Running script2")
         # Construct the path to the script.py file
-        script_path = os.path.join(os.path.dirname(__file__), '../../Pipeline/script.py')
+        script_path = os.path.join(os.path.dirname(__file__), '../../Pipeline')
         # Ensure the path is absolute
         script_path = os.path.abspath(script_path)
-        command = f'python {script_path}'
+        command = f'python script.py'
         # Run the script
-        subprocess.run(command, shell=True)
+        subprocess.run(command, shell=True, cwd=script_path)
         return "True"
     except Exception as e:
         return "False"

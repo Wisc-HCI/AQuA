@@ -10,7 +10,7 @@
 .top-section {
   display: flex;
   gap: 20px;
-  height: 400px; /* the height control of the whole first rolw of video display, AV script, and prompting */
+  height: 500px; /* the height control of the whole first rolw of video display, AV script, and prompting */
 }
 
 .top-section > div {
