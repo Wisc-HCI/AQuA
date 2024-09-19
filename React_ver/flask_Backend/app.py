@@ -13,6 +13,9 @@ import base64
 import json
 from flask_migrate import Migrate
 import requests
+from io import BytesIO
+from moviepy.editor import VideoFileClip
+import tempfile
 
 #--------------------------------------------------------------------------------------------------------------------------------#
 # INITIALIZATION
@@ -65,16 +68,37 @@ def home():
 @app.route('/upload', methods=['POST'])
 def upload_video():
     try:
-        # Get the video and audio files from the incoming request.
-        video_file = request.files['video']
-        audio_file = request.files['audio']
+        # Check if video is in the request files
+        if 'video' not in request.files:
+            return jsonify({'error': 'No video file uploaded'}), 400
 
-        # Read the binary data from the video and audio files.
+        video_file = request.files['video']
         video_data = video_file.read()
         video_name = video_file.filename
 
-        audio_data = audio_file.read()
-        audio_name = audio_file.filename
+        # Check if audio is also provided
+        audio_file = request.files.get('audio')  # Using get() to avoid KeyError
+        if audio_file:
+            # If audio file is provided, use it
+            audio_data = audio_file.read()
+            audio_name = audio_file.filename
+        else:
+            # If no audio file is provided, extract audio from the video
+            with tempfile.NamedTemporaryFile(delete=True, suffix='.mp4') as temp_video:
+                temp_video.write(video_data)
+                temp_video.flush()  # Ensure data is written to the file
+
+                video_clip = VideoFileClip(temp_video.name)
+
+                # Extract audio from video and save as MP3
+                with tempfile.NamedTemporaryFile(delete=True, suffix='.mp3') as temp_audio:
+                    video_clip.audio.write_audiofile(temp_audio.name, codec='mp3')  # Save audio to temporary file
+                    audio_name = f"{video_name.rsplit('.', 1)[0]}.mp3"  # Use video name for audio file with mp3 extension
+                    
+                    temp_audio.seek(0)  # Reset buffer position
+                    audio_data = temp_audio.read()  # Read audio data from temp file
+
+                video_clip.close()  # Close video clip to free resources
 
         # Create a new instance of the StorageModel to store the video and audio in the database.
         new_video = StorageModel(
@@ -90,6 +114,7 @@ def upload_video():
 
         # Return a success message if the operation is successful.
         return jsonify({'message': 'Video and audio uploaded successfully'}), 201
+
     except Exception as e:
         # Return an error message if something goes wrong during the upload process.
         return jsonify({'error': 'Failed to upload video and audio', 'message': str(e)}), 500
@@ -255,6 +280,37 @@ def retrieve_AV():
     
     except Exception as e:
         return jsonify({'error': 'Failed to retrieve JSON data', 'message': str(e)}), 500
+
+##================================================================================================================================================================================
+@app.route('/run-and-retrieve-AV', methods=['POST'])
+def run_and_retrieve_AV():
+    print("Running AVscript and retrieving data")
+    try:
+        # Step 1: Run the AV script
+        data = request.get_json()  # Get the selected objects from the request
+        json_string = json.dumps(data)
+        # Construct the path to the AV script
+        script_path = os.path.join(os.path.dirname(__file__), '../../Pipeline/AVscript.py')
+        script_path = os.path.abspath(script_path)
+        command = f'python {script_path} \'{json_string}\''
+        result = subprocess.run(command, shell=True)
+
+        if result.returncode != 0:  # Check if the script ran successfully
+            return jsonify({'error': 'Failed to run AV script'}), 500
+        
+        # Step 2: Retrieve the AV data
+        video_record = StorageModel.query.order_by(StorageModel.created_at.desc()).first_or_404()
+
+        if not video_record:
+            return jsonify({'error': 'No video records found'}), 404
+
+        AV_data = video_record.AV_segmented  # Retrieve the AV segmented data
+
+        # Return the AV data in the response
+        return jsonify({'message': 'AV script ran successfully', 'AV_data': AV_data}), 200
+
+    except Exception as e:
+        return jsonify({'error': 'Error during AV process', 'message': str(e)}), 500
     
 ##================================================================================================================================================================================
 
@@ -317,7 +373,7 @@ def chat():
             json={
                 'model': 'gpt-4',
                 'messages': [
-                    {'role': 'system', 'content': 'Generate follow-up questions related to the topic of this prompt.'},
+                    {'role': 'system', 'content': 'Generate follow-up questions related to the topic of this prompt in 55 characters.'},
                     {'role': 'user', 'content': prompt}
                 ],
                 'max_tokens': 100,

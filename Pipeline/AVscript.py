@@ -14,6 +14,15 @@ def trim_audio(json_transcript):
     ]
     return extracted_segments
 
+def default_AVscript():
+    with open('../../Pipeline/recent_audio.json', 'r') as f:
+            timestamped_transcript = json.load(f)
+
+            formatted_text = [{"type": "other", "text": segment["text"]} for segment in timestamped_transcript["segments"]]
+            formatted_output = json.dumps(formatted_text)
+            return formatted_output
+
+
 def check_sources(objects_json):
     sources = set()
     for item in objects_json:
@@ -130,71 +139,81 @@ def segment_data_video(data, objects):
 
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python AVscript.py <objects_json>")
-        sys.exit(1)
-    
-    try:
-        objects_json = json.loads(sys.argv[1])
-        objects_json = objects_json['selectedObjects']
-    except json.JSONDecodeError:
-        print("Invalid JSON")
-        sys.exit(1)
-
-    print("Objects JSON:", objects_json)
-
-    print("Running AVscript")
-    timestamped_transcript = None
-
-    print(os.getcwd())
-
-    try:
-        with open('../../Pipeline/recent_audio.json', 'r') as f:
-            timestamped_transcript = json.load(f)
-    except FileNotFoundError:
-        print("recent_audio.json file not found. Please ensure the file is in the correct directory.")
-        # handle the case when the file is not found
-
-
-    # with open('recent_audio.json','r') as f:
-    #     timestamped_transcript = json.load(f)
-    
-    if(timestamped_transcript!=None):
-        data = trim_audio(timestamped_transcript)
-        if check_sources(objects_json) == "audio":
-            words = []
-            for item in objects_json:
-                words.append(item["object"])
-            print("Hello")
-            segments = segment_text_audio(data, words)
-        elif check_sources(objects_json) == "video" or check_sources(objects_json) == "both":
-            print("Bye")
-            if len(objects_json) == 1:
-                times = objects_json[0].get('times', [])
-                tuples = [(time['start'], time['end']) for time in times]
-                objects = tuples
-                segments = segment_data_video(data, objects)
+    data = json.loads(sys.argv[1])
+    if data.get('selectedObjects') == []:
+        print("No objects passed, calling default_AVscript.")
+        formatted_output = default_AVscript()
+        formatted_output = json.loads(formatted_output)
+        try:
+            response = requests.put('http://127.0.0.1:5000/upload-AV', json=formatted_output)
+            if response.status_code == 200:
+                print("Segments uploaded successfully")
             else:
-                objects= find_intersections(objects_json)
-                if objects == "No intersections":
-                    print("No intersections found")
-                else:
-                    segments = segment_data_video(data, objects)
-        
-        print("segments:", segments)
-        
-        if segments:  
-            try:
-                response = requests.put('http://localhost:5000/upload-AV', json=segments)
-                if response.status_code == 200:
-                    print("Segments uploaded successfully")
-                else:
-                    print(f"Failed to upload segments: {response.status_code} - {response.text}")
-            except Exception as e:
-                print(f"Failed to make PUT request: {e}")
-
+                print(f"Failed to upload segments: {response.status_code} - {response.text}")
+        except Exception as e:
+            print(f"Failed to make PUT request: {e}")
     else:
-        print("No audio transcript found")
+        try:
+            objects_json = json.loads(sys.argv[1])
+            objects_json = objects_json['selectedObjects']
+        except json.JSONDecodeError:
+            print("Invalid JSON")
+            sys.exit(1)
+
+        print("Objects JSON:", objects_json)
+
+        print("Running AVscript")
+        timestamped_transcript = None
+
+        print(os.getcwd())
+
+        try:
+            with open('../../Pipeline/recent_audio.json', 'r') as f:
+                timestamped_transcript = json.load(f)
+        except FileNotFoundError:
+            print("recent_audio.json file not found. Please ensure the file is in the correct directory.")
+            # handle the case when the file is not found
+
+
+        # with open('recent_audio.json','r') as f:
+        #     timestamped_transcript = json.load(f)
+        
+        if(timestamped_transcript!=None):
+            data = trim_audio(timestamped_transcript)
+            if check_sources(objects_json) == "audio":
+                words = []
+                for item in objects_json:
+                    words.append(item["object"])
+                print("Hello")
+                segments = segment_text_audio(data, words)
+            elif check_sources(objects_json) == "video" or check_sources(objects_json) == "both":
+                print("Bye")
+                if len(objects_json) == 1:
+                    times = objects_json[0].get('times', [])
+                    tuples = [(time['start'], time['end']) for time in times]
+                    objects = tuples
+                    segments = segment_data_video(data, objects)
+                else:
+                    objects= find_intersections(objects_json)
+                    if objects == "No intersections":
+                        print("No intersections found")
+                    else:
+                        segments = segment_data_video(data, objects)
+            
+            print("segments:", segments)
+            
+            if segments:  
+                try:
+                    response = requests.put('http://127.0.0.1:5000/upload-AV', json=segments)
+                    if response.status_code == 200:
+                        print("Segments uploaded successfully")
+                    else:
+                        print(f"Failed to upload segments: {response.status_code} - {response.text}")
+                except Exception as e:
+                    print(f"Failed to make PUT request: {e}")
+
+        else:
+            print("No audio transcript found")
 
 if __name__ == "__main__":
     main()

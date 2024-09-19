@@ -165,6 +165,14 @@ def fetch_files_from_api(api_url,output_path):
         return output_path
     else:
         return None
+    
+def default_AVscript():
+    with open('recent_audio.json', 'r') as f:
+            timestamped_transcript = json.load(f)
+
+            formatted_text = [{"type": "other", "text": segment["text"]} for segment in timestamped_transcript["segments"]]
+            formatted_output = json.dumps(formatted_text)
+            return formatted_output
 
 def main(custom_nouns=None):
     print("Running script")
@@ -203,6 +211,18 @@ def main(custom_nouns=None):
         else:
             print(response)
             print('Failed to update, status code:', response.status_code)
+        
+        default_AV = default_AVscript()
+
+        try:
+            response = requests.put('http://127.0.0.1:5000/upload-AV', json=default_AV)
+            if response.status_code == 200:
+                print("Segments uploaded successfully")
+            else:
+                print(f"Failed to upload segments: {response.status_code} - {response.text}")
+        except Exception as e:
+            print(f"Failed to make PUT request: {e}")
+
     else:
         print("Failed to fetch video and audio data from the API")
 
