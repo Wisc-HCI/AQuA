@@ -63,8 +63,8 @@ def generate_and_process_frames(video_path):
 
 
 def generate_transcript(audio_file):
-
-    command = f"whisperx {audio_file} --compute_type int8"
+    token = "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"
+    command = f"whisperx {audio_file} --compute_type int8 --diarize --hf_token {token}"
     subprocess.run(command, shell=True)
 
 

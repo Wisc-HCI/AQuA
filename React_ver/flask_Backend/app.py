@@ -373,7 +373,7 @@ def chat():
             json={
                 'model': 'gpt-4',
                 'messages': [
-                    {'role': 'system', 'content': 'Generate follow-up questions related to the topic of this prompt in 55 characters.'},
+                    {'role': 'system', 'content': 'Generate 3 follow-up questions related to the topic of this prompt in only 55 characters.'},
                     {'role': 'user', 'content': prompt}
                 ],
                 'max_tokens': 100,
