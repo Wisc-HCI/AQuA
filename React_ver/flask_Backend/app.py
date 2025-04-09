@@ -16,7 +16,23 @@ import requests
 from io import BytesIO
 from moviepy.editor import VideoFileClip
 import tempfile
-
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_community.vectorstores import Chroma
+from langchain.chains import ConversationalRetrievalChain, LLMChain
+from langchain.memory import ConversationBufferMemory
+from langchain_text_splitters import CharacterTextSplitter
+from langchain.document_loaders import DirectoryLoader, TextLoader
+from langchain.prompts import ChatPromptTemplate
+from langchain_openai import AzureOpenAI, AzureOpenAIEmbeddings
+import openai
+from langchain.schema.runnable import RunnableSequence, RunnablePassthrough
+from chromadb.config import Settings
+import chromadb
+from langchain.chains import RetrievalQA
+import google.generativeai as genai
+import time
 #--------------------------------------------------------------------------------------------------------------------------------#
 # INITIALIZATION
 #--------------------------------------------------------------------------------------------------------------------------------#
@@ -34,6 +50,10 @@ migrate = Migrate(app, db)
 
 # Set up logging to capture detailed debug-level logs, which can be useful for troubleshooting.
 logging.basicConfig(level=logging.DEBUG)
+
+
+genai_model = None
+genai_video_file = None
 
 #--------------------------------------------------------------------------------------------------------------------------------#
 # DATABASE MODEL
@@ -170,76 +190,7 @@ def get_most_recent_audio():
         # Log any errors and return an error message if the retrieval fails.
         logging.error(f"Error retrieving the most recent video and audio: {e}")
         return jsonify({'error': 'Failed to retrieve the most recent video and audio', 'message': str(e)}), 500
-
-#--------------------------------------------------------------------------------------------------------------------------------#
-# ROUTE: '/upload-json' [PUT]
-# Purpose: Uploads and associates JSON data with the most recently uploaded video.
-@app.route('/upload-json', methods=['PUT'])
-def upload_json():
-    try:
-        # Retrieve the JSON data from the request body.
-        json_data = request.json
-        print(json_data)
-        if not json_data:
-            return jsonify({'error': 'No JSON data provided'}), 400
-
-        # Query the database to find the most recently uploaded video.
-        video_record = StorageModel.query.order_by(StorageModel.created_at.desc()).first()
-        if not video_record:
-            return jsonify({'error': 'No video records found'}), 404
-
-        # Update the video record with the new JSON data.
-        video_record.json_data = json_data
-        db.session.commit()
-
-        # Return a success message if the operation is successful.
-        return jsonify({'message': 'JSON data updated successfully'}), 200
-    except Exception as e:
-        # Return an error message if something goes wrong during the update process.
-        return jsonify({'error': 'Failed to update JSON data', 'message': str(e)}), 500
-
-#--------------------------------------------------------------------------------------------------------------------------------#
-# ROUTE: '/retrieve-json' [GET]
-# Purpose: Retrieves the JSON data associated with the most recently uploaded video.
-@app.route('/retrieve-json', methods=['GET'])
-def retrieve_json():
-    try:
-        # Query the database to find the most recently uploaded video and its associated JSON data.
-        video_record = StorageModel.query.order_by(StorageModel.created_at.desc()).first_or_404()
-
-        if not video_record:
-            return jsonify({'error': 'No video records found'}), 404
-
-        # Retrieve the JSON data from the video record.
-        json_data = video_record.json_data
-
-        # Return the JSON data to the client.
-        return json_data
     
-    except Exception as e:
-        # Return an error message if something goes wrong during the retrieval process.
-        return jsonify({'error': 'Failed to retrieve JSON data', 'message': str(e)}), 500
-
-    
-##================================================================================================================================================================================
-#have to get the object values and send it to the script
-@app.route('/run-AV', methods=['POST'])
-def run_AV():
-    print("Running AVscript")
-    try:
-        data = request.get_json()
-        json_string = json.dumps(data)
-        # Construct the path to the script.py file
-        script_path = os.path.join(os.path.dirname(__file__), '../../Pipeline/AVscript.py')
-        # Ensure the path is absolute
-        script_path = os.path.abspath(script_path)
-        command = f'python {script_path} \'{json_string}\''
-        # Run the script
-        subprocess.run(command, shell=True)
-        return "True"
-    except Exception as e:
-        return "False"
-
 ##================================================================================================================================================================================
 
 @app.route('/upload-AV', methods=['PUT'])
@@ -280,44 +231,69 @@ def retrieve_AV():
     
     except Exception as e:
         return jsonify({'error': 'Failed to retrieve JSON data', 'message': str(e)}), 500
-
-##================================================================================================================================================================================
-@app.route('/run-and-retrieve-AV', methods=['POST'])
-def run_and_retrieve_AV():
-    print("Running AVscript and retrieving data")
-    try:
-        # Step 1: Run the AV script
-        data = request.get_json()  # Get the selected objects from the request
-        json_string = json.dumps(data)
-        # Construct the path to the AV script
-        script_path = os.path.join(os.path.dirname(__file__), '../../Pipeline/AVscript.py')
-        script_path = os.path.abspath(script_path)
-        command = f'python {script_path} \'{json_string}\''
-        result = subprocess.run(command, shell=True)
-
-        if result.returncode != 0:  # Check if the script ran successfully
-            return jsonify({'error': 'Failed to run AV script'}), 500
-        
-        # Step 2: Retrieve the AV data
-        video_record = StorageModel.query.order_by(StorageModel.created_at.desc()).first_or_404()
-
-        if not video_record:
-            return jsonify({'error': 'No video records found'}), 404
-
-        AV_data = video_record.AV_segmented  # Retrieve the AV segmented data
-
-        # Return the AV data in the response
-        return jsonify({'message': 'AV script ran successfully', 'AV_data': AV_data}), 200
-
-    except Exception as e:
-        return jsonify({'error': 'Error during AV process', 'message': str(e)}), 500
     
 ##================================================================================================================================================================================
+def send_email(recipient_email):
+    message = Mail(
+        from_email='nikhilkss2002@gmail.com',  # Replace with your verified sender email
+        to_emails=recipient_email,
+        subject='Your Video Has Been Uploaded and Processed',
+        html_content=f'<strong>Your video has been successfully uploaded and processed.</strong>'
+    )
+    try:
+        sg = SendGridAPIClient('')
+        response = sg.send(message)
+        print(f"Email sent to {recipient_email}")
+        return response.status_code
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return None
+    
+def initialize_genai(video_file):
+    global genai_model, genai_video_file
+    genai.configure(api_key="")
+    genai_model = genai.GenerativeModel("gemini-2.0-flash-lite")
+    print(f"Uploading file...")
+    genai_video_file = genai.upload_file(path=video_file)
+    print(f"Completed upload: {genai_video_file.uri}")
+    print("Uploaded")
+
+    # Check whether the file is ready to be used.
+    while genai_video_file.state.name == "PROCESSING":
+        print('.', end='')
+        time.sleep(10)
+        genai_video_file = genai.get_file(genai_video_file.name)
+    
+    print(f"Final state: {genai_video_file.state.name}")  # Add this debug line
+
+    if genai_video_file.state.name == "FAILED":
+        return "Failed"
+    return "Success"
 
 @app.route('/run-script', methods=['POST'])
 def run_script():
     print("Running script")
     try:
+        data = request.get_json()
+        print(data)
+        email = data.get('email')  # Get email from the frontend
+        vid = requests.get('http://127.0.0.1:5000/video/recent')
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_video:
+            temp_video.write(vid.content)
+            temp_video_path = temp_video.name
+            
+        print(f"Temporary video saved at: {temp_video_path}")
+
+        print(email)
+        res = initialize_genai(temp_video_path)
+        print(res)
+
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+        
+        if res == "Failed":
+            return jsonify({'error': 'Failed to upload video'}), 500
         # Construct the path to the script.py file
         script_path = os.path.join(os.path.dirname(__file__), '../../Pipeline')
         # Ensure the path is absolute
@@ -326,68 +302,91 @@ def run_script():
         # Run the script
         subprocess.run(command, shell=True, cwd=script_path)
         return "True"
+    
+        
     except Exception as e:
         # Return "False" if the script execution fails.
         return "False"
 
-#--------------------------------------------------------------------------------------------------------------------------------#
+
 # ROUTE: '/chat' [POST]
 # Purpose: Interacts with an external LLM API to generate a response and dynamic follow-up questions based on user input.
 @app.route('/chat', methods=['POST'])
 def chat():
+    if genai_model is None:
+        return jsonify({'error': 'Model not initialized'}), 500
+    
     # Retrieve the prompt (user input) from the JSON request body.
     prompt = request.json.get('prompt')
+    goal = request.json.get('goal')
+    print("Prompt: ", prompt)
+    print("Goal: ", goal)
+
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    data_file = os.path.join(current_dir, '..', '..', 'Pipeline', 'data', 'transcript.txt')
+    with open(data_file, 'r') as f:
+        data = f.read()
+
+
     try:
-        # Send the prompt to the LLM API to generate a response.
-        response = requests.post(
-            #make sure to include the version at the end of this url below:
-            'https://test-llm-openai.openai.azure.com/openai/deployments/Testbed/chat/completions?api-version=2024-02-01',
-            headers={
-                'Authorization': 'Bearer a2cc2b6310e4424ca9230faf143a048f',
-                'api-key': 'a2cc2b6310e4424ca9230faf143a048f'
-            },
-            json={
-                'model': 'gpt-4',
-                'messages': [{'role': 'user', 'content': prompt}],
-                'max_tokens': 300,
-                'n': 1,
-                'stop': None,
-                'temperature': 0.7
-            }
-        )
-        # Raise an exception if the request failed.
-        response.raise_for_status()
-        llm_response = response.json()
 
-        # Extract the answer from the LLM response.
-        answer = llm_response['choices'][0]['message']['content']
+        final_prompt = f"""
+        Context: You are an Intelligent and friendly assistant that analyzes videos. Given a video,there are 7 broad categories of actions a user might ask for assistance in:
+        Explore, Elaborate, Filter, Connect, Retrieve, Abstract, and Summary. 
+        Be sure to respond to the user with the type of action you believe they are requesting. For example, if the user says: 'Please describe the video' you should respond with '[Summary]' along with the actual summary of the dataset. All actions should be within [].
+        Only respond to questions that are related to the video. If the user asks a question that is not related to the video respond with "I'm sorry, the video is not related to that.".
+        Lasltly, provide timestamps for the information you are providing in [] when relevant. An example response would be: "The name of the main character is Alex. [00:00-00:20]"
 
-        # Send another request to the LLM to generate follow-up questions based on the original prompt.
+        User Goal: {goal}
+        Prompt: {prompt}
+
+        Based on the user goal, provide a response.
+        """
+
+        print("generating response")
+
+        response = genai_model.generate_content([genai_video_file, final_prompt], request_options={"timeout": 600})
+        answer = response.text
+
+        print("generating follow-up questions")
+        
+        # Construct the context suggestions prompt
+        Context_suggestions = f"""
+        Based on the following data:
+        data:{data}
+        Given this wide potential of information, there are 7 broad categories of actions a user might ask for assistance in:
+        Explore, Elaborate, Filter, Retrieve, Abstract, and Summary. Include the type of suggestion as well. For Example: What is the gray wire connected to?(retrieve)
+        """
+
+        # Send the request to the GPT API
         follow_up_response = requests.post(
-            # Make sure to include the latest version being used here:
             'https://test-llm-openai.openai.azure.com/openai/deployments/Testbed/chat/completions?api-version=2024-02-01',
             headers={
                 'Authorization': 'Bearer a2cc2b6310e4424ca9230faf143a048f',
-                'api-key': 'a2cc2b6310e4424ca9230faf143a048f'
+                'api-key': ''
             },
             json={
                 'model': 'gpt-4',
                 'messages': [
-                    {'role': 'system', 'content': 'Generate 3 follow-up questions related to the topic of this prompt in only 55 characters.'},
-                    {'role': 'user', 'content': prompt}
+                    {'role': 'system', 'content': Context_suggestions},
+                    {'role': 'user', 'content': f"""Based on the goal:{goal}. Generate 4 follow-up questions that a user might ask to explore the topic further. Each question should be 45 characters or less.
+                    The questions should be related to the video and the user goal.
+                    """},
                 ],
-                'max_tokens': 100,
+                'max_tokens': 200,  # Increase token limit to allow more detailed suggestions
                 'n': 1,
-                'temperature': 0.7
+                'temperature': 0.5,  # Lower temperature for more deterministic output
+                'top_p': 0.9  # Narrow the focus for high-probability completions
             }
         )
+
         # Raise an exception if the request failed.
         follow_up_response.raise_for_status()
         follow_up_questions = follow_up_response.json()['choices'][0]['message']['content']
 
         # Parse the follow-up questions into a list (assuming the response format contains line breaks).
         suggestions = [q.strip() for q in follow_up_questions.split('\n') if q]
-
+        # suggestions = []
         # Return both the answer and the follow-up questions as JSON.
         return jsonify({
             'answer': answer,
@@ -398,10 +397,97 @@ def chat():
         print(f"Error: {e}")
         return jsonify({'error': str(e)}), 500
 
+
+# @app.route('/chat', methods=['POST'])
+# def chat():
+#     if genai_model is None:
+#         return jsonify({'error': 'Model not initialized'}), 500
+    
+#     # Retrieve user input
+#     prompt = request.json.get('prompt')
+#     goal = request.json.get('goal')
+#     print("Prompt: ", prompt)
+#     print("Goal: ", goal)
+
+#     # Load data file
+#     current_dir = os.path.dirname(os.path.abspath(__file__))
+#     data_file = os.path.join(current_dir, '..', '..', 'Pipeline', 'data', 'data.json')
+#     with open(data_file, 'r') as f:
+#         data = json.load(f)
+
+#     try:
+#         final_prompt = f"""
+#         Context: You are an Intelligent and friendly assistant that analyzes videos. Given a video, there are 7 broad categories of actions a user might ask for assistance in:
+#         Explore, Elaborate, Filter, Connect, Retrieve, Abstract, and Summary. 
+#         Respond with the type of action you believe they are requesting. For example, if the user says: 'Please describe the video' you should respond with '[Summary]' along with the actual summary of the dataset. All actions should be within [].
+#         Only respond to questions related to the video. If the user asks something unrelated, respond with "I'm sorry, the video is not related to that."
+#         Provide timestamps in [] when relevant. Example response: "The main character is Alex. [00:00-00:20]"
+
+#         User Goal: {goal}
+#         Prompt: {prompt}
+
+#         Based on the user goal, provide a response.
+#         """
+
+#         print("Generating response...")
+#         response = genai_model.generate_content([final_prompt], request_options={"timeout": 600})
+#         answer = response.text
+
+#         print("Generating follow-up questions...")
+
+#         context_suggestions = f"""
+#         Given this information, there are 7 broad categories of actions a user might ask for assistance in:
+#         Explore, Elaborate, Filter, Retrieve, Abstract, and Summary. 
+#         Include the type of suggestion as well. Example: "What is the gray wire connected to? (Retrieve)"
+#         """
+
+#         follow_up_prompt = f"""
+#         Based on the goal: {goal}.
+#         Generate 4 follow-up questions that a user might ask to explore the topic further. Each question should be 45 characters or less.
+#         The questions should be related to the video and the user goal.
+#         """
+
+#         follow_up_response = genai_model.generate_content([context_suggestions, follow_up_prompt])
+#         follow_up_questions = follow_up_response.text.split("\n")
+
+#         suggestions = [q.strip() for q in follow_up_questions if q]
+
+#         return jsonify({
+#             'answer': answer,
+#             'suggestions': suggestions
+#         })
+#     except Exception as e:
+#         print(f"Error: {e}")
+#         return jsonify({'error': str(e)}), 500
+    
+    
+@app.route('/log', methods=['POST'])
+def log_action():
+    try:
+        data = request.get_json(force=True)  # Add force=True to handle no-cors requests
+        log_entry = data.get('log_entry')
+        if not log_entry:
+            return jsonify({'error': 'No log entry provided'}), 400
+            
+        with open('execution_log.txt', 'a') as f:
+            f.write(log_entry)
+            
+        response = jsonify({'status': 'success'})
+        response.headers.add('Access-Control-Allow-Origin', '*')  # Add CORS header
+        return response
+        
+    except Exception as e:
+        logging.error(f"Logging error: {str(e)}")
+        return jsonify({'error': 'Failed to log entry', 'message': str(e)}), 500
+
 #--------------------------------------------------------------------------------------------------------------------------------#
 # MAIN EXECUTION
 #--------------------------------------------------------------------------------------------------------------------------------#
 
 # Starts the Flask application in debug mode, enabling detailed error pages and automatic reloading on code changes.
 if __name__ == '__main__':
+    print("Initializing RAG")
+    # initialize_rag()
+    print("RAG initialized")
     app.run(debug=True)
+

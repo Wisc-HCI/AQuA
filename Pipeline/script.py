@@ -9,58 +9,10 @@ import requests
 import base64
 from collections import defaultdict
 import ast
-
-
-def generate_and_process_frames(video_path):
-    cap = cv2.VideoCapture(video_path)
-
-    if not cap.isOpened():
-        print("Error: Could not open video.")
-        return
-    
-    frame_count = 0
-
-    # Get the frame rate of the video
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
-    print(f"Frames per second: {fps}")
-
-    second_count = 0
-    while True:
-        ret, frame = cap.read()
-
-        # If the frame was not read successfully, break the loop
-        if not ret:
-            break
-
-        # Process one frame per second
-        if frame_count % fps == 0:
-            # Define the Detic Image demo command with the required parameters
-            detic_image_demo_command = (
-                f"python demo.py --config-file configs/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.yaml "
-                f"--input ../{second_count}.jpg --output ../{second_count}_demo.jpg --vocabulary lvis "
-                f"--opts MODEL.WEIGHTS ../models/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
-            )
-            
-            # Save the frame to a temporary file
-            temp_frame_path = f"{second_count}.jpg"
-            output_frame_path = f"{second_count}_demo.jpg"
-            cv2.imwrite(temp_frame_path, frame)
-            
-            # Run the Detic Image demo command
-            subprocess.run(detic_image_demo_command, shell=True, cwd='Detic')
-            
-            # Optionally, remove the temporary file after processing
-            os.remove(temp_frame_path)
-            os.remove(output_frame_path)
-            
-            second_count += 1
-
-        frame_count += 1
-
-    # Release the video capture object
-    cap.release()
-    print(f"Processed {second_count} frames.")
-
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from ultralytics import YOLO
+import cv2
+from openai import AzureOpenAI
 
 def generate_transcript(audio_file):
     token = "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"
@@ -79,48 +31,6 @@ def extract_nouns(transcript_file):
     nouns = set(token.text for token in doc if token.pos_ == "NOUN")
     return nouns
 
-
-def process_detic_labels(file_path):
-
-    file_content = []
-    with open(file_path, 'r') as file:
-        for line in file:
-            # Extract the list part of the line and convert it to a Python list
-            objects_list = ast.literal_eval(line.strip())
-            file_content.append(objects_list)
-
-    object_times = defaultdict(list)
-
-    # Populate the object_times dictionary
-    for second, objects in enumerate(file_content):
-        for obj in objects:
-            object_times[obj].append(second)
-
-    # Combine consecutive times into one interval
-    def combine_intervals(times):
-        intervals = []
-        start = times[0]
-        for i in range(1, len(times)):
-            if times[i] != times[i-1] + 1:
-                intervals.append((start, times[i-1]))
-                start = times[i]
-        intervals.append((start, times[-1]))
-        return intervals
-
-    # Create the final JSON structure
-    final_data = []
-    for obj, times in object_times.items():
-        intervals = combine_intervals(times)
-        json_intervals = []
-        for start, end in intervals:
-            if start == end:
-                start -= 1  # Subtract 1 from the start if start and end are the same
-            json_intervals.append({"start": start, "end": end})
-        final_data.append({"object": obj, "times": json_intervals, "source": "video"})
-
-    # Print the final JSON data
-    json_output = json.dumps(final_data, indent=2)
-    return json_output
 
 def process_transcript_labels(nouns):
     with open('recent_audio.json','r') as f:
@@ -144,20 +54,9 @@ def process_transcript_labels(nouns):
     
     return noun_times
 
-# def run_detic(video_file, words):
-
-#     custom_vocabulary = ','.join(words)
-
-#     detic_demo_command = (
-#         f"python demo.py --config-file configs/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.yaml "
-#         f"--video-input ../media/{video_file} --output ../outputs/output_video.mp4 --vocabulary custom "
-#         f"--custom_vocabulary {custom_vocabulary} --confidence-threshold 0.3 "
-#         f"--opts MODEL.WEIGHTS ../models/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
-#     )
-
-#     subprocess.run(detic_demo_command, shell=True, cwd='Detic')
 
 def fetch_files_from_api(api_url,output_path):
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     response = requests.get(api_url)
     if response.status_code == 200:
         with open(output_path, 'wb') as f:
@@ -166,13 +65,139 @@ def fetch_files_from_api(api_url,output_path):
     else:
         return None
     
-def default_AVscript():
-    with open('recent_audio.json', 'r') as f:
-            timestamped_transcript = json.load(f)
 
-            formatted_text = [{"type": "other", "text": segment["text"]} for segment in timestamped_transcript["segments"]]
-            formatted_output = json.dumps(formatted_text)
-            return formatted_output
+
+def detect_objects_in_segments(video_path, transcript_data, confidence_threshold=0.5):
+    """
+    Detect objects in video segments defined by transcript data using YOLO.
+
+    Args:
+        video_path (str): Path to the input video
+        transcript_data (list): List of dictionaries with 'start_time' and 'end_time'
+        confidence_threshold (float): Minimum confidence threshold for detections
+
+    Returns:
+        list: Updated transcript data with detected objects for each segment
+    """
+    # Load the YOLO model
+    model = YOLO('yolov8n.pt')  # Using YOLOv8 nano model
+
+    # Initialize video capture
+    cap = cv2.VideoCapture(video_path)
+    
+    # Get video frame rate
+    fps = cap.get(cv2.CAP_PROP_FPS)
+
+    for segment in transcript_data:
+        start_frame = int(segment['start_time'] * fps)
+        end_frame = int(segment['end_time'] * fps)
+
+        # Set video to start frame
+        cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+
+        # Store unique detected objects for this segment
+        detected_objects = set()
+
+        # Process frames in the segment
+        for frame_num in range(start_frame, end_frame):
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            # Run inference on the frame
+            results = model(frame)
+
+            # Process results
+            for r in results:
+                boxes = r.boxes
+
+                for box in boxes:
+                    # Get confidence score
+                    confidence = float(box.conf)
+                    
+                    if confidence >= confidence_threshold:
+                        # Get class name
+                        class_id = int(box.cls)
+                        class_name = model.names[class_id]
+                        
+                        # Add to detected objects set (unique by class name)
+                        detected_objects.add(class_name)
+
+        # Add detected objects to the transcript segment
+        segment['Objects'] = list(detected_objects)
+
+    cap.release()
+    
+    return transcript_data
+
+def process_transcript_and_detect_objects(video_path, confidence_threshold=0.65):
+    json_file_path = 'recent_audio.json'
+    output_json_file_path = 'data/data.json'
+    
+    with open(json_file_path, 'r') as f:
+        data = json.load(f)
+
+    transcript_data = []
+
+    previous_speaker = None
+    consolidated_text = ""
+    start_time = None
+    end_time = None
+
+    for segment in data["segments"]:
+        current_speaker = segment["speaker"].lower()  # Convert to lowercase
+
+        # Check if the speaker label is in the expected format
+        if current_speaker.startswith('speaker_'):
+            try:
+                speaker_number = int(current_speaker.split('_')[1]) + 1
+                current_speaker = f"Speaker-{speaker_number}"
+            except (IndexError, ValueError) as e:
+                print(f"Error processing speaker label '{current_speaker}': {e}")
+                current_speaker = "unknown"
+        else:
+            print(f"Unexpected speaker format: {current_speaker}")
+            current_speaker = "unknown"
+
+        current_text = segment["text"]
+        current_start = segment["start"]
+        current_end = segment["end"]
+
+        if current_speaker == previous_speaker:
+            # Concatenate text and adjust end time
+            consolidated_text += " " + current_text
+            end_time = current_end
+        else:
+            # Add to transcript data
+            if previous_speaker is not None:
+                transcript_data.append({
+                    "start_time": start_time,
+                    "end_time": end_time,
+                    "text": consolidated_text,
+                    "speaker": previous_speaker
+                })
+
+            # Reset for the new speaker
+            previous_speaker = current_speaker
+            consolidated_text = current_text
+            start_time = current_start
+            end_time = current_end
+
+    # Add the last speaker's consolidated text to the transcript data
+    if previous_speaker is not None:
+        transcript_data.append({
+            "start_time": start_time,
+            "end_time": end_time,
+            "text": consolidated_text,
+            "speaker": previous_speaker
+        })
+    
+    transcript_data = detect_objects_in_segments(video_path, transcript_data, confidence_threshold)
+
+    with open(output_json_file_path, 'w') as f:
+        json.dump(transcript_data, f, indent=4)
+
+    return json.dumps(transcript_data)
 
 def main(custom_nouns=None):
     print("Running script")
@@ -180,52 +205,40 @@ def main(custom_nouns=None):
     print("wrote video")
     audio_path = fetch_files_from_api("http://127.0.0.1:5000/audio/recent", 'media/recent_audio.wav')
     print("wrote audio")
+    print("Video path is:", video_path)
 
     if video_path and audio_path:
-        generate_transcript(audio_file=audio_path)
-        print("Transcript generated")
+        # generate_transcript(audio_file=audio_path)
+        # print("Transcript generated")
 
-        audio_filename = os.path.basename(audio_path)
-        transcript_file = os.path.splitext(audio_filename)[0] + '.txt'
+        # audio_filename = os.path.basename(audio_path)
+        # transcript_file = os.path.splitext(audio_filename)[0] + '.txt'
 
-        nouns = extract_nouns(transcript_file=transcript_file)
+        # nouns = extract_nouns(transcript_file=transcript_file)
         
-        print("The nouns are:",nouns)
+        # print("The nouns are:", nouns)
 
-        # path = "outputs/frames"
-        # print("Video path is:",video_path)
-        # generate_and_process_frames(video_path)
-        json_data = process_detic_labels("Detic/labels.txt")
 
-        transcript_json_data = process_transcript_labels(nouns)
+        # Pass the parsed data to the function
+        # data = process_transcript_and_detect_objects(video_path=video_path, confidence_threshold=0.5)
+        # print("Transcript data with objects:", data)
 
-        json_data_list = json.loads(json_data)
+        # try:
+        #     response = requests.put('http://127.0.0.1:5000/upload-AV', json=data)
+        #     if response.status_code == 200:
+        #         print("Segments uploaded successfully")
+        #     else:
+        #         print(f"Failed to upload segments: {response.status_code} - {response.text}")
+        # except Exception as e:
+        #     print(f"Failed to make PUT request: {e}")
 
-        final_json = json_data_list + transcript_json_data
-        print("Final JSON data:", final_json)
-
-        response = requests.put('http://127.0.0.1:5000/upload-json', json=final_json)
-
-        if response.status_code == 200 or response.status_code == 204:
-            print('Updated successfully')
-        else:
-            print(response)
-            print('Failed to update, status code:', response.status_code)
-        
-        default_AV = default_AVscript()
-
-        try:
-            response = requests.put('http://127.0.0.1:5000/upload-AV', json=default_AV)
-            if response.status_code == 200:
-                print("Segments uploaded successfully")
-            else:
-                print(f"Failed to upload segments: {response.status_code} - {response.text}")
-        except Exception as e:
-            print(f"Failed to make PUT request: {e}")
+        print("done")
 
     else:
         print("Failed to fetch video and audio data from the API")
 
 
+
 if __name__ == "__main__":
     main()
+
